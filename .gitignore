@@ -5,6 +5,4 @@
 *.keystore
 .local/
 CLAUDE.local.md
-.claude/
-.codex/
-.agents/
+.claude/settings.local.json
