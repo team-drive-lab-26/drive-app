@@ -3,7 +3,6 @@
 | 작업 | 먼저 읽을 문서 |
 | --- | --- |
 | 무엇이 정해졌는지 확인 | [planning/decisions.md](planning/decisions.md) |
-| 화면 구조와 이동 | [planning/ia.md](planning/ia.md) |
 | 색, 글자, 캐릭터 | [design/README.md](design/README.md) |
 | 앱 ↔ 서버 | [api/README.md](api/README.md) |
 | 저장 데이터 | [db/README.md](db/README.md) |
