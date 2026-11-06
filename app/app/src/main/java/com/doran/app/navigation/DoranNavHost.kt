@@ -6,15 +6,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.doran.app.ui.album.AlbumScreen
-import com.doran.app.ui.albummap.AlbumMapScreen
-import com.doran.app.ui.character.CharacterScreen
-import com.doran.app.ui.driving.DrivingScreen
-import com.doran.app.ui.music.MusicScreen
-import com.doran.app.ui.onboarding.OnboardingScreen
-import com.doran.app.ui.record.RecordScreen
-import com.doran.app.ui.record.SpeakerSelectScreen
-import com.doran.app.ui.settings.SettingsScreen
+import com.doran.app.feature.album.AlbumScreen
+import com.doran.app.feature.albummap.AlbumMapScreen
+import com.doran.app.feature.character.CharacterScreen
+import com.doran.app.feature.driving.DrivingScreen
+import com.doran.app.feature.music.MusicScreen
+import com.doran.app.feature.onboarding.OnboardingScreen
+import com.doran.app.feature.record.RecordScreen
+import com.doran.app.feature.record.SpeakerSelectScreen
+import com.doran.app.feature.settings.SettingsScreen
 
 @Composable
 fun DoranNavHost(isDriving: Boolean) {
@@ -22,42 +22,42 @@ fun DoranNavHost(isDriving: Boolean) {
 
     LaunchedEffect(isDriving) {
         if (isDriving) {
-            nav.navigate(Routes.DRIVING) { launchSingleTop = true }
+            nav.navigate(Route.Driving) { launchSingleTop = true }
         } else {
-            nav.popBackStack(Routes.DRIVING, inclusive = true)
+            nav.popBackStack<Route.Driving>(inclusive = true)
         }
     }
 
-    NavHost(navController = nav, startDestination = Routes.ONBOARDING) {
-        composable(Routes.ONBOARDING) {
+    NavHost(navController = nav, startDestination = Route.Onboarding) {
+        composable<Route.Onboarding> {
             OnboardingScreen(
                 onDone = {
-                    nav.navigate(Routes.ALBUM) {
-                        popUpTo(Routes.ONBOARDING) { inclusive = true }
+                    nav.navigate(Route.Album) {
+                        popUpTo<Route.Onboarding> { inclusive = true }
                     }
                 },
             )
         }
-        composable(Routes.ALBUM) {
+        composable<Route.Album> {
             AlbumScreen(
-                onOpenMap = { nav.navigate(Routes.ALBUM_MAP) },
-                onOpenCharacter = { nav.navigate(Routes.CHARACTER) },
-                onOpenSettings = { nav.navigate(Routes.SETTINGS) },
-                onOpenRecord = { nav.navigate(Routes.RECORD) },
-                onOpenMusic = { nav.navigate(Routes.MUSIC) },
+                onOpenMap = { nav.navigate(Route.AlbumMap) },
+                onOpenCharacter = { nav.navigate(Route.Character) },
+                onOpenSettings = { nav.navigate(Route.Settings) },
+                onOpenRecord = { nav.navigate(Route.Record) },
+                onOpenMusic = { nav.navigate(Route.Music) },
             )
         }
-        composable(Routes.ALBUM_MAP) { AlbumMapScreen() }
-        composable(Routes.CHARACTER) { CharacterScreen() }
-        composable(Routes.SETTINGS) { SettingsScreen() }
-        composable(Routes.RECORD) {
-            RecordScreen(onRecorded = { nav.navigate(Routes.SPEAKER_SELECT) })
+        composable<Route.AlbumMap> { AlbumMapScreen() }
+        composable<Route.Character> { CharacterScreen() }
+        composable<Route.Settings> { SettingsScreen() }
+        composable<Route.Record> {
+            RecordScreen(onRecorded = { nav.navigate(Route.SpeakerSelect) })
         }
-        composable(Routes.SPEAKER_SELECT) {
-            SpeakerSelectScreen(onDone = { nav.popBackStack(Routes.ALBUM, inclusive = false) })
+        composable<Route.SpeakerSelect> {
+            SpeakerSelectScreen(onDone = { nav.popBackStack<Route.Album>(inclusive = false) })
         }
-        composable(Routes.MUSIC) { MusicScreen() }
-        composable(Routes.DRIVING) { DrivingScreen() }
+        composable<Route.Music> { MusicScreen() }
+        composable<Route.Driving> { DrivingScreen() }
     }
 
     // NavHost보다 뒤에 둬야 먼저 호출된다. 주행 중에는 지도, 카드, 목록 화면으로 돌아가지 못하게 막는다

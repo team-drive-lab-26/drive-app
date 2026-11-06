@@ -10,10 +10,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.doran.app.data.vehicle.FakeVehicleStateSource
+import com.doran.app.core.data.FakeVehicleStateSource
+import com.doran.app.core.designsystem.DebugVehicleBar
+import com.doran.app.core.designsystem.DoranTheme
 import com.doran.app.navigation.DoranNavHost
-import com.doran.app.ui.components.DebugVehicleBar
-import com.doran.app.ui.theme.DoranTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

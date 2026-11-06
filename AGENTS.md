@@ -9,6 +9,8 @@
 
 앱 명령: `cd app && ./gradlew assembleDebug`
 
+앱 코드는 `com.doran.app` 아래 한 모듈에서 나눈다. 화면은 `feature/<이름>`, 공통 코드는 `core/`(`model`, `data`, `designsystem`), 화면 경로는 `navigation/`에 둔다. 새 영역은 필요해질 때 추가한다(예: `core/voice`). `feature`끼리는 서로 참조하지 않는다.
+
 ## 작업 전
 
 [docs/index.md](docs/index.md)에서 해당 영역을 찾아 먼저 읽는다. 기획은 자주 바뀌므로 `docs/planning/decisions.md`를 우선한다.
