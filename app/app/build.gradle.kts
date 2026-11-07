@@ -18,9 +18,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "AGENT_BASE_URL", "\"http://10.0.2.2:8765\"")
+        }
         release {
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("debug")
+            buildConfigField("String", "AGENT_BASE_URL", "\"\"")
         }
     }
 

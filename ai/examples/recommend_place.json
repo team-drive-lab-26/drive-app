@@ -1,0 +1,10 @@
+{
+  "kind": "user_utterance",
+  "now": "2026-11-07T12:00:00+09:00",
+  "vehicle": {"gear": "D"},
+  "utterance": "근처 맛집 추천해 줘",
+  "network_available": true,
+  "places": [
+    {"id": "tour-001", "name": "바닷가 식당", "source": "tour_api", "category": "food", "along_route": true}
+  ]
+}
