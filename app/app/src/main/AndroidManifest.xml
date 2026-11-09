@@ -14,6 +14,9 @@
     <!-- 녹음과 음성 응답 -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 추천 곡 재생 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
     <queries>
         <intent>
@@ -44,5 +47,16 @@
                 android:name="distractionOptimized"
                 android:value="true" />
         </activity>
+
+        <!-- 차 기본 미디어 앱이 찾을 수 있도록 공개한다 -->
+        <service
+            android:name=".core.media.DoranPlaybackService"
+            android:exported="true"
+            android:foregroundServiceType="mediaPlayback">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaLibraryService" />
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

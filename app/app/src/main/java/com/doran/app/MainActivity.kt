@@ -8,6 +8,7 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -24,6 +25,7 @@ import com.doran.app.core.data.PleosWaypointController
 import com.doran.app.core.designsystem.AgentDebugPanel
 import com.doran.app.core.designsystem.DebugVehicleBar
 import com.doran.app.core.designsystem.DoranTheme
+import com.doran.app.core.media.MusicPlayer
 import com.doran.app.navigation.DoranNavHost
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -43,12 +45,15 @@ class MainActivity : ComponentActivity() {
     private lateinit var tts: TextToSpeech
     private lateinit var waypointController: PleosWaypointController
     private var ttsReady = false
+    private lateinit var musicPlayer: MusicPlayer
+    private var pendingTrackId: String? = null
     private val audioPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) startListening() else caption.value = "마이크 권한이 필요해"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        musicPlayer = MusicPlayer(this)
         waypointController = PleosWaypointController(this) {
             runOnUiThread {
                 caption.value = "내비에서 경유지를 추가하지 못했어."
@@ -59,6 +64,16 @@ class MainActivity : ComponentActivity() {
             ttsReady = status == TextToSpeech.SUCCESS
             if (ttsReady) tts.language = Locale.KOREAN
         }
+        tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) = Unit
+            override fun onDone(utteranceId: String?) {
+                if (utteranceId == REPLY_UTTERANCE) runOnUiThread(::playPendingTrack)
+            }
+            @Deprecated("Deprecated in Java")
+            override fun onError(utteranceId: String?) {
+                if (utteranceId == REPLY_UTTERANCE) runOnUiThread(::playPendingTrack)
+            }
+        })
         setContent {
             DoranTheme {
                 val state by vehicle.state.collectAsStateWithLifecycle()
@@ -105,10 +120,17 @@ class MainActivity : ComponentActivity() {
                     }
                     spoken = ""
                 }
-                if (reply.requestedTrackId != null) spoken = "음악 플레이어 연결이 필요해."
+                reply.requestedTrackId?.let { trackId ->
+                    if (musicPlayer.canPlay(trackId)) {
+                        // 안내 음성과 겹치지 않게 말이 끝난 뒤 튼다
+                        pendingTrackId = trackId
+                    } else {
+                        spoken = "이 곡은 아직 들을 수 없어."
+                    }
+                }
                 if (reply.requestedCapsuleId != null) spoken = "녹음 재생 연결이 필요해."
                 if (reply.waypoint == null) caption.value = spoken.ifBlank { reply.caption.ifBlank { "다시 말해 줘" } }
-                speak(spoken)
+                if (!speak(spoken)) playPendingTrack()
             } catch (_: Exception) {
                 caption.value = "AI 서버에 연결할 수 없어"
                 speak(caption.value)
@@ -138,10 +160,15 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun speak(text: String) {
-        if (ttsReady && text.isNotBlank()) {
-            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "doran-reply")
-        }
+    private fun speak(text: String): Boolean {
+        if (!ttsReady || text.isBlank()) return false
+        return tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, REPLY_UTTERANCE) == TextToSpeech.SUCCESS
+    }
+
+    private fun playPendingTrack() {
+        val trackId = pendingTrackId ?: return
+        pendingTrackId = null
+        musicPlayer.play(trackId)
     }
 
     private fun requestListening() {
@@ -186,7 +213,12 @@ class MainActivity : ComponentActivity() {
         recognizer?.destroy()
         tts.shutdown()
         waypointController.release()
+        musicPlayer.release()
         scope.cancel()
         super.onDestroy()
+    }
+
+    private companion object {
+        const val REPLY_UTTERANCE = "doran-reply"
     }
 }
