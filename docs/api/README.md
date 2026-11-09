@@ -26,6 +26,6 @@
 
 ## Android 시연 연결
 
-디버그 앱은 `BuildConfig.AGENT_BASE_URL=http://10.0.2.2:8765`를 사용하고 HTTP 통신을 허용합니다. 릴리스 빌드의 주소는 비어 있어 운영 서버를 결정하기 전에는 AI 호출을 시작하지 않습니다. 앱은 정차 중 텍스트 입력 시연 패널, 주행 중 음성 입력 버튼·한 줄 자막을 사용합니다. 음성 인식과 TTS는 현재 Android 기본 서비스를 호출하므로 Pleos 전용 음성 서비스 연동과 실차 품질 검증이 남아 있습니다. 차량 기어 값도 아직 `FakeVehicleStateSource`에서 옵니다.
+디버그 앱은 `BuildConfig.AGENT_BASE_URL=http://10.0.2.2:8765`를 사용하고 HTTP 통신을 허용합니다. 포트가 다르면 `app/local.properties`에 `doran.agentBaseUrl=http://10.0.2.2:<포트>`를 넣습니다. 앱은 Retrofit으로 호출하며 요청·응답 형식은 `core/network/AgentDtos.kt`에 있습니다. 릴리스 빌드의 주소는 비어 있어 운영 서버를 결정하기 전에는 AI 호출을 시작하지 않습니다. 앱은 정차 중 텍스트 입력 시연 패널, 주행 중 음성 입력 버튼·한 줄 자막을 사용합니다. 음성 인식과 TTS는 현재 Android 기본 서비스를 호출하므로 Pleos 전용 음성 서비스 연동과 실차 품질 검증이 남아 있습니다. 차량 기어 값도 아직 `FakeVehicleStateSource`에서 옵니다.
 
 경유지 효과는 [Pleos NaviHelper v3.0.5 경유지 API](https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/NaviHelper/waypoint-settings)에 전달합니다. 앱은 SDK 연결 후 요청을 보내고 오류 콜백을 자막으로 표시합니다. 실제 경유지 반영 여부는 Pleos 전용 에뮬레이터에서 확인해야 합니다.
