@@ -29,6 +29,8 @@ def _items(payload: dict[str, Any]) -> list[dict[str, Any]]:
     if header.get("resultCode") not in (None, "0000"):
         raise TourApiError(f"{header.get('resultCode')} {header.get('resultMsg')}")
     items = payload.get("response", {}).get("body", {}).get("items") or {}
+    if isinstance(items, list):
+        return items
     item = items.get("item", []) if isinstance(items, dict) else []
     return item if isinstance(item, list) else [item]
 

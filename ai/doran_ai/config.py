@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     )
 
     tourapi_service_key: str = ""
+    data_go_kr_service_key: str = ""
     doran_llm_endpoint: str = ""
     doran_llm_model: str = ""
     doran_llm_api_key: str = ""

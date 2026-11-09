@@ -26,6 +26,7 @@ class Place(Point):
     route_distance_km: float | None = None
     along_route: bool = False
     navi_poi_id: str | None = None
+    dummy: bool = False
 
 
 class RestStop(Point):
@@ -39,6 +40,7 @@ class RestStop(Point):
     route_distance_km: float | None = None
     along_route: bool = False
     navi_poi_id: str | None = None
+    dummy: bool = False
 
 
 class Track(BaseModel):
@@ -47,6 +49,7 @@ class Track(BaseModel):
     artist: str
     source: Literal["catalog"] = "catalog"
     tags: list[TrackMood]
+    dummy: bool = False
 
 
 class Route(BaseModel):
