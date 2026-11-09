@@ -6,3 +6,5 @@
 .local/
 CLAUDE.local.md
 .claude/settings.local.json
+!.env.example
+server/var/

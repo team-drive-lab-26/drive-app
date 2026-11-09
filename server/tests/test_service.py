@@ -1,13 +1,11 @@
 import json
-import sys
 import unittest
 from pathlib import Path
 from urllib import request
 from threading import Thread
 from http.server import ThreadingHTTPServer
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from main import AgentService, load_catalog, make_handler
+from server.main import AgentService, load_catalog, make_handler
 
 
 NOW = "2026-11-07T12:00:00+09:00"

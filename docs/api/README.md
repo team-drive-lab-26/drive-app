@@ -20,7 +20,7 @@
 {"session_id":"demo-1","type":"mention","id":"place-1","name":"별빛 카페","category":"cafe"}
 ```
 
-`type`은 `mention`, `stop`, `capsule` 중 하나입니다. `stop`·`capsule`에는 `id`만 필요합니다. 성공하면 `{"status":"ok"}`를 반환합니다. 이 API는 음성 파일을 업로드하거나 저장하지 않고 **기록 메타데이터만** 메모리에 보관합니다.
+`type`은 `mention`, `stop`, `capsule` 중 하나입니다. `stop`·`capsule`에는 `id`만 필요합니다. 성공하면 `{"status":"ok"}`를 반환합니다. 이 API는 음성 파일을 업로드하지 않고 **기록 메타데이터만** 서버 DB(`trip_events`)에 저장합니다. 서버를 다시 켜도 같은 `session_id`의 기록이 남습니다. 저장 구조는 [docs/db](../db/README.md)를 따릅니다.
 
 `GET /health`는 서버 동작 상태를 알려 줍니다. 잘못된 요청은 HTTP 400과 `{"error":"invalid_request"}`, 없는 경로는 404를 반환합니다. 서버가 닿지 않으면 앱은 연결 실패 자막을 보여 줍니다.
 

@@ -5,17 +5,18 @@ from __future__ import annotations
 import json
 import os
 import re
-import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
 from threading import RLock
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ai"))
-from doran_ai import DoranAgent  # noqa: E402
+from doran_ai import DoranAgent
+from doran_ai.knowledge import KnowledgeBase
 
+from server.config import ServerSettings
+from server.db import TripRepository, create_db_engine, session_factory
+from server.db.migrate import upgrade
 
 DEMO_PLACES = [
     {"id": "demo-place-1", "name": "시연 장소", "source": "tour_api", "category": "attraction", "along_route": True},
@@ -46,11 +47,12 @@ class Session:
 
 
 class AgentService:
-    def __init__(self, *, places=None, rest_stops=None, tracks=None):
+    def __init__(self, *, places=None, rest_stops=None, tracks=None, trips: TripRepository | None = None):
         self.agent = DoranAgent()
         self.places = places if places is not None else DEMO_PLACES
         self.rest_stops = rest_stops if rest_stops is not None else DEMO_REST_STOPS
         self.tracks = tracks if tracks is not None else DEMO_TRACKS
+        self.trips = trips
         self.sessions: dict[str, Session] = {}
         self.lock = RLock()
 
@@ -68,7 +70,7 @@ class AgentService:
             raise ValueError("now에 시간대가 필요합니다")
 
         with self.lock:
-            session = self.sessions.setdefault(session_id, Session())
+            session = self._session(session_id)
             if session.pending_until and now >= session.pending_until:
                 session.pending_waypoint_id = None
                 session.pending_until = None
@@ -180,7 +182,7 @@ class AgentService:
         if not isinstance(item_id, str) or not item_id or len(item_id) > 128:
             raise ValueError("기록 ID가 올바르지 않습니다")
         with self.lock:
-            session = self.sessions.setdefault(session_id, Session())
+            session = self._session(session_id)
             if kind == "mention":
                 name = request.get("name")
                 if not isinstance(name, str) or not name.strip() or len(name) > 80:
@@ -188,8 +190,21 @@ class AgentService:
                 entry = {"id": item_id, "name": name.strip(), "category": request.get("category", "")}
                 session.trip["mentions"].append(entry)
             else:
-                session.trip["stops" if kind == "stop" else "capsules"].append({"id": item_id})
+                entry = {"id": item_id}
+                session.trip["stops" if kind == "stop" else "capsules"].append(entry)
+            if self.trips:
+                self.trips.add_event(
+                    session_id, kind, item_id, name=entry.get("name", ""), category=str(entry.get("category", ""))[:32]
+                )
             return {"status": "ok"}
+
+    def _session(self, session_id: str) -> Session:
+        if session_id not in self.sessions:
+            session = Session()
+            if self.trips:
+                session.trip = self.trips.load_trip(session_id)
+            self.sessions[session_id] = session
+        return self.sessions[session_id]
 
     def _place(self, place_id: str) -> dict[str, Any] | None:
         return next((p for p in self.places + self.rest_stops if p.get("id") == place_id), None)
@@ -268,9 +283,17 @@ def make_handler(service: AgentService):
 
 
 def main() -> None:
+    settings = ServerSettings()
     catalog_path = os.getenv("DORAN_CATALOG_FILE")
-    catalog = load_catalog(catalog_path) if catalog_path else {}
-    server = ThreadingHTTPServer(("127.0.0.1", 8765), make_handler(AgentService(**catalog)))
+    if catalog_path:
+        catalog = load_catalog(catalog_path)
+    else:
+        knowledge = KnowledgeBase.load(settings.region_dir)
+        catalog = knowledge.agent_catalog() if knowledge.places else {}
+    upgrade(settings.doran_database_url)
+    trips = TripRepository(session_factory(create_db_engine(settings.doran_database_url)), settings.doran_region)
+    service = AgentService(**catalog, trips=trips)
+    server = ThreadingHTTPServer(("127.0.0.1", 8765), make_handler(service))
     print("Doran local demo server: http://127.0.0.1:8765", flush=True)
     try:
         server.serve_forever()
