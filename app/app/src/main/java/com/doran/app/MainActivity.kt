@@ -19,13 +19,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.doran.app.core.data.AgentClient
+import com.doran.app.core.data.AgentRepository
 import com.doran.app.core.data.FakeVehicleStateSource
 import com.doran.app.core.data.PleosWaypointController
 import com.doran.app.core.designsystem.AgentDebugPanel
 import com.doran.app.core.designsystem.DebugVehicleBar
 import com.doran.app.core.designsystem.DoranTheme
 import com.doran.app.core.media.MusicPlayer
+import com.doran.app.core.network.NavigationDto
+import com.doran.app.core.network.VehicleDto
 import com.doran.app.navigation.DoranNavHost
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,7 +42,7 @@ class MainActivity : ComponentActivity() {
     private val caption = mutableStateOf("")
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val sessionId = UUID.randomUUID().toString()
-    private val agentClient = AgentClient(BuildConfig.AGENT_BASE_URL)
+    private val agentRepository = AgentRepository(BuildConfig.AGENT_BASE_URL)
     private var recognizer: SpeechRecognizer? = null
     private lateinit var tts: TextToSpeech
     private lateinit var waypointController: PleosWaypointController
@@ -101,14 +103,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun submitUtterance(text: String) {
-        if (BuildConfig.AGENT_BASE_URL.isBlank()) {
+        if (!agentRepository.isConfigured) {
             caption.value = "AI 서버 설정이 필요해"
             return
         }
         scope.launch {
             caption.value = "도란이 듣고 있어"
             try {
-                val reply = agentClient.send(sessionId, vehicle.state.value.gear.name, utterance = text)
+                val reply = agentRepository.send(sessionId, currentVehicle(), utterance = text)
                 var spoken = reply.speech
                 reply.waypoint?.let { waypoint ->
                     waypointController.add(waypoint) { submitted ->
@@ -141,16 +143,11 @@ class MainActivity : ComponentActivity() {
     private fun submitDemoEvent(event: String) {
         scope.launch {
             try {
-                val vehicleExtras = org.json.JSONObject()
-                val navigation = org.json.JSONObject()
-                if (event == "trip_started") navigation.put("distance_from_home_km", 120)
-                if (event == "continuous_drive") vehicleExtras.put("continuous_driving_minutes", 130)
-                val reply = agentClient.send(
+                val reply = agentRepository.send(
                     sessionId,
-                    vehicle.state.value.gear.name,
+                    currentVehicle(continuousDrivingMinutes = if (event == "continuous_drive") 130 else null),
                     event = event,
-                    vehicleExtras = vehicleExtras,
-                    navigation = navigation,
+                    navigation = NavigationDto(distanceFromHomeKm = if (event == "trip_started") 120.0 else null),
                 )
                 caption.value = reply.caption.ifBlank { "이번에는 제안이 없어" }
                 speak(reply.speech)
@@ -159,6 +156,11 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    private fun currentVehicle(continuousDrivingMinutes: Int? = null) = VehicleDto(
+        gear = vehicle.state.value.gear.name,
+        continuousDrivingMinutes = continuousDrivingMinutes,
+    )
 
     private fun speak(text: String): Boolean {
         if (!ttsReady || text.isBlank()) return false

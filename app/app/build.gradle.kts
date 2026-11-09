@@ -1,9 +1,18 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
 }
+
+// 팀원마다 서버 포트가 다를 수 있어 local.properties의 doran.agentBaseUrl로 바꿀 수 있게 한다
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use(::load)
+}
+val debugAgentBaseUrl = localProperties.getProperty("doran.agentBaseUrl", "http://10.0.2.2:8765")
 
 android {
     namespace = "com.doran.app"
@@ -19,7 +28,7 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("String", "AGENT_BASE_URL", "\"http://10.0.2.2:8765\"")
+            buildConfigField("String", "AGENT_BASE_URL", "\"$debugAgentBaseUrl\"")
         }
         release {
             isMinifyEnabled = false
@@ -56,6 +65,10 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.4")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
+    implementation("com.squareup.retrofit2:retrofit:3.0.0")
+    implementation("com.squareup.retrofit2:converter-kotlinx-serialization:3.0.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("androidx.media3:media3-exoplayer:1.8.0")
     implementation("androidx.media3:media3-session:1.8.0")
 }
