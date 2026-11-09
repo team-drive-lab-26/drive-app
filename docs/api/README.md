@@ -12,6 +12,8 @@
 
 응답은 AI 계약의 `status`, `speech`, `caption`, `proposal_type`, `selected_place_id`, `selected_track_id`, `cards`, `commands`에 `effects` 배열을 더합니다. `commands`는 서버 내부 상태 갱신 요청이고, `effects`만 앱이 처리합니다. `effects`에는 `ADD_WAYPOINT`(`place`: ID·이름·위도·경도·`navi_poi_id`·선택적 `navi_poi_sub_id`·주소), `PLAY_MUSIC`(`track_id`), `PLAY_CAPSULE`(`capsule_id`)가 나올 수 있습니다. `PLAY_MUSIC`·`PLAY_CAPSULE`은 재생 완료가 아닌 실행 요청입니다. 좌표나 내비 POI ID가 없는 장소는 내비 효과를 반환하지 않습니다. 관광 API의 콘텐츠 ID와 Pleos NaviHelper의 POI ID는 별개로 관리합니다.
 
+정차 중 카드에서 장소를 고를 때는 `selected_place_id`를 보낼 수 있습니다. 서버는 같은 세션에서 최근 2분 안에 제시한 장소만 받습니다. 곡의 `selected_track_id`도 최근 5분 안에 추천한 곡과 일치해야 합니다. 오래된 ID나 다른 세션의 ID를 요청에 넣어도 선택 상태가 되살아나지 않습니다.
+
 ## `POST /v1/trip/record`
 
 ```json

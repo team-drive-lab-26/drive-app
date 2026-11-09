@@ -64,6 +64,10 @@ class AgentTests(unittest.TestCase):
         history = [{"type": "meal", "at": "2026-11-07T11:30:00+09:00"}, {"type": "departure", "at": "2026-11-07T11:45:00+09:00"}]
         self.assertEqual(self.agent.handle({**base, "recent_proposals": history})["status"], "no_action")
 
+    def test_future_proposal_timestamp_does_not_block_current_offer(self):
+        data = request("vehicle_event", event="trip_started", navigation={"distance_from_home_km": 120}, recent_proposals=[{"type": "departure", "at": "2026-11-07T12:30:00+09:00"}])
+        self.assertEqual(self.agent.handle(data)["proposal_type"], "departure")
+
     def test_arrival_event_only_at_meal_time(self):
         base = request("vehicle_event", event="arrival_30m", navigation={"eta_minutes": 25, "arrival_local_time": "12:25"})
         self.assertEqual(self.agent.handle(base)["proposal_type"], "meal")

@@ -173,6 +173,8 @@ class DoranAgent:
                 at = _time(item["at"]).astimezone(now.tzinfo)
             except (KeyError, TypeError, ValueError):
                 continue
+            if at > now:
+                continue
             if at.date() == now.date() and item.get("type") == proposal_type:
                 return True
             if timedelta(0) <= now - at < timedelta(hours=1):

@@ -37,6 +37,7 @@ class Session:
     pending_until: datetime | None = None
     selected_place_id: str | None = None
     selected_place_until: datetime | None = None
+    offered_place_ids: list[str] = field(default_factory=list)
     selected_track_id: str | None = None
     selected_track_until: datetime | None = None
     recent_proposals: list[dict[str, str]] = field(default_factory=list)
@@ -74,9 +75,20 @@ class AgentService:
             if session.selected_place_until and now >= session.selected_place_until:
                 session.selected_place_id = None
                 session.selected_place_until = None
+                session.offered_place_ids.clear()
             if session.selected_track_until and now >= session.selected_track_until:
                 session.selected_track_id = None
                 session.selected_track_until = None
+            requested_place_id = request.get("selected_place_id")
+            requested_track_id = request.get("selected_track_id")
+            selected_place_id = (
+                requested_place_id if requested_place_id in session.offered_place_ids
+                else session.selected_place_id if requested_place_id is None else None
+            )
+            selected_track_id = (
+                session.selected_track_id if requested_track_id is None or requested_track_id == session.selected_track_id
+                else None
+            )
             payload = {
                 "kind": request.get("kind"),
                 "now": now_value,
@@ -91,8 +103,8 @@ class AgentService:
                 "trip": session.trip,
                 "preferences": {"quiet": session.quiet},
                 "recent_proposals": session.recent_proposals,
-                "selected_place_id": request.get("selected_place_id") or session.selected_place_id,
-                "selected_track_id": request.get("selected_track_id") or session.selected_track_id,
+                "selected_place_id": selected_place_id,
+                "selected_track_id": selected_track_id,
                 "pending_waypoint_id": session.pending_waypoint_id,
             }
             result = self.agent.handle(payload)
@@ -109,9 +121,17 @@ class AgentService:
                 if result["selected_place_id"] is None:
                     session.selected_place_id = None
                     session.selected_place_until = None
+                    session.offered_place_ids.clear()
             if result["selected_place_id"]:
                 session.selected_place_id = result["selected_place_id"]
                 session.selected_place_until = now + timedelta(minutes=2)
+                session.offered_place_ids = [result["selected_place_id"]]
+                session.offered_place_ids.extend(
+                    card["place_id"] for card in result["cards"]
+                    if isinstance(card, dict)
+                    and isinstance(card.get("place_id"), str)
+                    and card["place_id"] != result["selected_place_id"]
+                )
             if result["selected_track_id"]:
                 session.selected_track_id = result["selected_track_id"]
                 session.selected_track_until = now + timedelta(minutes=5)
