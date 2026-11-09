@@ -15,6 +15,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ai"))
 from doran_ai import DoranAgent  # noqa: E402
+from doran_ai.llm import ChatCompletionsClassifier  # noqa: E402
 
 
 DEMO_PLACES = [
@@ -47,7 +48,7 @@ class Session:
 
 class AgentService:
     def __init__(self, *, places=None, rest_stops=None, tracks=None):
-        self.agent = DoranAgent()
+        self.agent = DoranAgent(ChatCompletionsClassifier.from_env())
         self.places = places if places is not None else DEMO_PLACES
         self.rest_stops = rest_stops if rest_stops is not None else DEMO_REST_STOPS
         self.tracks = tracks if tracks is not None else DEMO_TRACKS

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 from typing import Protocol
+from urllib.parse import urlsplit
 from urllib import request
 
 
@@ -22,11 +23,14 @@ class ChatCompletionsClassifier:
     네트워크·모델 오류 시 상위 에이전트가 규칙 기반 응답으로 돌아간다.
     """
 
-    def __init__(self, endpoint: str, model: str, api_key: str, timeout: float = 2.5):
-        if not endpoint.startswith("https://"):
-            raise ValueError("DORAN_LLM_ENDPOINT는 HTTPS 주소여야 합니다")
+    def __init__(self, endpoint: str, model: str, api_key: str, timeout: float = 12.0):
+        parsed = urlsplit(endpoint)
+        if parsed.scheme != "https" or not parsed.netloc or parsed.username or parsed.password:
+            raise ValueError("LLM 주소는 HTTPS여야 합니다")
         if not model or not api_key:
             raise ValueError("모델 이름과 API 키가 필요합니다")
+        if not 0 < timeout <= 60:
+            raise ValueError("LLM 제한 시간은 0초 초과 60초 이하여야 합니다")
         self.endpoint = endpoint
         self.model = model
         self.api_key = api_key
@@ -39,7 +43,8 @@ class ChatCompletionsClassifier:
         api_key = os.getenv("DORAN_LLM_API_KEY", "")
         if not (endpoint and model and api_key):
             return None
-        return cls(endpoint, model, api_key)
+        timeout = os.getenv("DORAN_LLM_TIMEOUT_SECONDS")
+        return cls(endpoint, model, api_key, float(timeout) if timeout else 12.0)
 
     def classify(self, utterance: str) -> str:
         body = {
@@ -60,10 +65,7 @@ class ChatCompletionsClassifier:
         req = request.Request(
             self.endpoint,
             data=json.dumps(body).encode("utf-8"),
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            },
+            headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
             method="POST",
         )
         with request.urlopen(req, timeout=self.timeout) as response:

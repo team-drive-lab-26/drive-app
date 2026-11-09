@@ -46,7 +46,7 @@ class AgentClient(private val baseUrl: String) {
         try {
             connection.requestMethod = "POST"
             connection.connectTimeout = 3000
-            connection.readTimeout = 5000
+            connection.readTimeout = 20000
             connection.doOutput = true
             connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
             connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }

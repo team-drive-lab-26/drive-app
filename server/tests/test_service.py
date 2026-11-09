@@ -5,6 +5,7 @@ from pathlib import Path
 from urllib import request
 from threading import Thread
 from http.server import ThreadingHTTPServer
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from main import AgentService, load_catalog, make_handler
@@ -15,6 +16,9 @@ NOW = "2026-11-07T12:00:00+09:00"
 
 class ServiceTests(unittest.TestCase):
     def setUp(self):
+        llm_patcher = patch("main.ChatCompletionsClassifier.from_env", return_value=None)
+        llm_patcher.start()
+        self.addCleanup(llm_patcher.stop)
         self.places = [{"id": "p1", "name": "바닷가 식당", "source": "tour_api", "category": "food", "along_route": True, "latitude": 37.41275833, "longitude": 127.09481944, "navi_poi_id": "navi-1"}]
         self.service = AgentService(places=self.places, rest_stops=[], tracks=[])
 
@@ -85,6 +89,20 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(response["status"], "invalid_input")
         self.assertEqual(response["speech"], "")
         self.assertEqual(response["effects"], [])
+
+    def test_server_uses_configured_llm_for_unmatched_utterance(self):
+        class PlaceClassifier:
+            def classify(self, utterance):
+                return "place"
+
+        with patch("main.ChatCompletionsClassifier.from_env", return_value=PlaceClassifier()):
+            service = AgentService(places=self.places, rest_stops=[], tracks=[])
+        result = service.respond({
+            "session_id": "trip-llm", "now": NOW, "kind": "user_utterance",
+            "vehicle": {"gear": "P"}, "utterance": "이 근방에 들를 곳을 추천해 줄래?",
+        })
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["selected_place_id"], "p1")
 
     def test_unverified_coordinates_do_not_emit_navigation(self):
         self.places[0].pop("latitude")

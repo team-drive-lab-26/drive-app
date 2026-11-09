@@ -1,0 +1,9 @@
+{
+  "kind": "user_utterance",
+  "now": "2026-11-09T15:00:00+09:00",
+  "vehicle": {"gear": "P"},
+  "utterance": "이 근방에 들를 곳을 추천해 줄래?",
+  "places": [
+    {"id": "demo-place-1", "name": "시연 장소", "source": "tour_api", "category": "attraction", "along_route": true}
+  ]
+}
