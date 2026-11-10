@@ -8,9 +8,13 @@
     <!-- Vehicle SDK -->
     <uses-permission android:name="pleos.car.permission.CAR_DRIVE" />
     <uses-permission android:name="pleos.car.permission.PRIVATE_CAR_SAFETY" />
+    <uses-permission android:name="pleos.car.permission.CAR_DOORS" />
     <!-- NaviHelper SDK -->
     <uses-permission android:name="pleos.car.permission.NAVI_ROUTE" />
     <uses-permission android:name="pleos.car.permission.NAVI_ROUTE_SEARCH" />
+    <!-- Pleos 음성 SDK -->
+    <uses-permission android:name="pleos.car.permission.TTS_SERVICE" />
+    <uses-permission android:name="pleos.car.permission.STT_SERVICE" />
     <!-- 녹음과 음성 응답 -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -28,6 +32,7 @@
     </queries>
 
     <application
+        android:name=".DoranApplication"
         android:allowBackup="false"
         android:label="@string/app_name"
         android:supportsRtl="true"

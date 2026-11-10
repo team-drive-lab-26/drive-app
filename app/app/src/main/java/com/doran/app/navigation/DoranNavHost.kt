@@ -17,7 +17,7 @@ import com.doran.app.feature.record.SpeakerSelectScreen
 import com.doran.app.feature.settings.SettingsScreen
 
 @Composable
-fun DoranNavHost(isDriving: Boolean, caption: String, onListen: () -> Unit) {
+fun DoranNavHost(isDriving: Boolean, caption: String, isListening: Boolean, onListen: () -> Unit) {
     val nav = rememberNavController()
 
     LaunchedEffect(isDriving) {
@@ -57,7 +57,7 @@ fun DoranNavHost(isDriving: Boolean, caption: String, onListen: () -> Unit) {
             SpeakerSelectScreen(onDone = { nav.popBackStack<Route.Album>(inclusive = false) })
         }
         composable<Route.Music> { MusicScreen() }
-        composable<Route.Driving> { DrivingScreen(caption = caption, onListen = onListen) }
+        composable<Route.Driving> { DrivingScreen(caption = caption, isListening = isListening, onListen = onListen) }
     }
 
     // NavHost보다 뒤에 둬야 먼저 호출된다. 주행 중에는 지도, 카드, 목록 화면으로 돌아가지 못하게 막는다
