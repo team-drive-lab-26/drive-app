@@ -143,6 +143,12 @@ class TripCoordinator(
         ask(event = event, vehicleOverride = v, navigationOverride = n)
     }
 
+    /** 디버그용. 에뮬레이터 내비에 강릉 목적지를 잡는다 */
+    fun startDemoRoute() {
+        val result = navi.requestRoute("강릉역", 37.7643, 128.8996, "강원특별자치도 강릉시 용지로 176")
+        log("경로 요청: 강릉역 → ${result::class.simpleName}")
+    }
+
     // ---- 이벤트 처리 ----
 
     private fun handle(triggers: List<TripTrigger>) {

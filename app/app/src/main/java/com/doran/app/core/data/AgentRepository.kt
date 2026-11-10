@@ -63,15 +63,14 @@ class AgentRepository(baseUrl: String) {
 
 private fun AgentResponse.toReply(): AgentReply {
     val waypoint = effects.firstOrNull { it.type == EffectDto.ADD_WAYPOINT }?.place?.let { place ->
-        // 내비 POI ID가 없으면 경유지를 추가할 수 없다
-        val poiId = place.naviPoiId ?: return@let null
+        // Pleos 내비는 POI ID 없이 좌표만으로도 경유지를 받는다(에뮬레이터에서 확인)
         WaypointRequest(
             id = place.id,
             name = place.name,
             latitude = place.latitude,
             longitude = place.longitude,
-            naviPoiId = poiId,
-            naviPoiSubId = place.naviPoiSubId ?: "0",
+            naviPoiId = place.naviPoiId.orEmpty(),
+            naviPoiSubId = place.naviPoiSubId.orEmpty(),
             address = place.address,
         )
     }

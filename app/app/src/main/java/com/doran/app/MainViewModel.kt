@@ -58,6 +58,7 @@ class MainViewModel(
     fun onMicPermissionDenied() = coordinator.onMicPermissionDenied()
     fun submitUtterance(text: String) = coordinator.submitUtterance(text)
     fun sendDemoEvent(event: String) = coordinator.sendDemoEvent(event)
+    fun startDemoRoute() = coordinator.startDemoRoute()
     fun overrideGear(gear: Gear) = coordinator.overrideGear(gear)
     fun overrideDoorOpen(open: Boolean) = coordinator.overrideDoorOpen(open)
 

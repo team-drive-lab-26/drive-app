@@ -44,6 +44,7 @@ class MainActivity : ComponentActivity() {
                                 ui = ui,
                                 onSubmit = viewModel::submitUtterance,
                                 onDemoEvent = viewModel::sendDemoEvent,
+                                onDemoRoute = viewModel::startDemoRoute,
                             )
                         }
                         DebugVehicleBar(

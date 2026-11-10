@@ -29,7 +29,12 @@ import java.util.Locale
 
 /** 정차 중 디버그 빌드에서만 보이는 시연 패널 */
 @Composable
-fun AgentDebugPanel(ui: MainUiState, onSubmit: (String) -> Unit, onDemoEvent: (String) -> Unit) {
+fun AgentDebugPanel(
+    ui: MainUiState,
+    onSubmit: (String) -> Unit,
+    onDemoEvent: (String) -> Unit,
+    onDemoRoute: () -> Unit,
+) {
     var text by remember { mutableStateOf("") }
     val time = remember { SimpleDateFormat("HH:mm:ss", Locale.KOREA) }
     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -67,6 +72,7 @@ fun AgentDebugPanel(ui: MainUiState, onSubmit: (String) -> Unit, onDemoEvent: (S
             DEMO_EVENTS.forEach { (event, label) ->
                 OutlinedButton(onClick = { onDemoEvent(event) }) { Text(label) }
             }
+            OutlinedButton(onClick = onDemoRoute) { Text("강릉 경로") }
         }
         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 120.dp)) {
             items(ui.conversation.logs) { log ->

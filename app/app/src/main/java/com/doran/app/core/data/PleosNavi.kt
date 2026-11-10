@@ -1,11 +1,13 @@
 package com.doran.app.core.data
 
 import ai.pleos.playground.navi.constants.NaviErrorCode
+import ai.pleos.playground.navi.constants.RouteOption
 import ai.pleos.playground.navi.constants.WaypointIndex
 import ai.pleos.playground.navi.data.DestinationArrivedInfo
 import ai.pleos.playground.navi.data.DestinationInfo
 import ai.pleos.playground.navi.data.DrivingInfo
 import ai.pleos.playground.navi.data.RequestWaypointInfo
+import ai.pleos.playground.navi.data.RouteInfo
 import ai.pleos.playground.navi.data.RouteStartInfo
 import ai.pleos.playground.navi.data.WaypointArrivedInfo
 import ai.pleos.playground.navi.helper.NaviHelper
@@ -154,6 +156,28 @@ class PleosNavi(context: Context) {
             _state.value.isConnected -> submit()
             connecting -> synchronized(pending) { pending += submit }
             else -> onResult(NaviCommandResult.NotConnected)
+        }
+    }
+
+    /** 목적지로 길안내를 시작한다. 에뮬레이터에서는 내비 검색 입력이 어려워 시연용으로 쓴다 */
+    fun requestRoute(name: String, latitude: Double, longitude: Double, address: String = ""): NaviCommandResult {
+        if (!_state.value.isConnected) return NaviCommandResult.NotConnected
+        return try {
+            helper.requestRoute(
+                RouteInfo(
+                    latitude = latitude,
+                    longitude = longitude,
+                    poiName = name,
+                    // 좌표만으로 길안내가 된다
+                    poiId = "",
+                    poiSubId = "",
+                    address = address,
+                    routeOption = RouteOption.RECOMMENDED,
+                ),
+            )
+            NaviCommandResult.Submitted
+        } catch (_: Exception) {
+            NaviCommandResult.Failed
         }
     }
 
