@@ -16,29 +16,23 @@ python -m examples.run_scenario
 
 `examples.run_scenario`는 출발 → 음악 추천·재생 요청 → 휴게소 제안·확인 → 기억 조회 → 귀가 중 음성 캡슐 재생 요청을 보여 줍니다. 서버의 제안 이력과 확인 대기 상태를 메모리에서 흉내 내며 실제 내비·음악·녹음 서비스를 호출하지 않습니다.
 
-## 선택형 LLM 연결
+## Groq LLM 연결
 
-기존 규칙에 없는 표현을 분류할 때만 OpenAI 호환 chat completions 엔드포인트를 호출합니다. 분류 결과는 `place`, `arrival`, `rest`, `music`, `memory`, `replay`, `unknown` 중 하나로 제한합니다. 장소·곡·답변은 검증된 후보와 기존 규칙으로 결정합니다. 모델에는 발화 텍스트만 보내고 위치·차량 상태·여행 기록은 보내지 않습니다. 모델 호출에 실패하면 규칙 기반 처리로 돌아갑니다.
+Groq `openai/gpt-oss-20b`는 규칙에 없는 발화의 의도를 분류하고, 규칙이 만든 답변 초안을 짧은 한국어 음성 문장으로 다듬습니다. 모델은 장소·곡·명령을 결정하지 않습니다. 이름·수치·질문 형식을 검사한 문장만 사용하며, 검증 실패나 통신 오류가 나면 초안으로 돌아갑니다. 경유지 추가·음악 재생처럼 실행 명령이 있는 응답은 문장 생성 대상에서 제외합니다.
 
-원격 시연 모델은 OpenRouter의 [Nemotron 3.5 Lightning 무료 엔드포인트](https://openrouter.ai/nvidia/nemotron-3.5-lightning%3Afree/)로 확인했습니다. [NVIDIA가 공개한 모델](https://developer.nvidia.com/blog/nvidia-nemotron-3-5-lightning-delivers-fast-accurate-specialized-task-execution-for-long-running-agents/)이며, OpenRouter의 무료 요청에는 계정 API 키와 호출 제한이 있습니다. 모델 비용이 $0이어도 서비스 용량에 따라 요청이 거절될 수 있습니다.
+저장소 루트의 `.env.example`을 참고해 Git에서 제외된 `.env`를 만드세요. Groq 콘솔에서 발급한 키를 `GROQ_API_KEY`에 넣고 서버를 실행합니다.
 
-```powershell
-if (-not $env:OPENROUTER_API_KEY) { throw "OpenRouter API 키가 필요합니다" }
-$env:DORAN_LLM_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
-$env:DORAN_LLM_MODEL = "nvidia/nemotron-3.5-lightning:free"
-$env:DORAN_LLM_API_KEY = $env:OPENROUTER_API_KEY
-$env:DORAN_LLM_TIMEOUT_SECONDS = "12"
-Get-Content -Raw examples/llm_recommend_place.json | python -m doran_ai
+```dotenv
+DORAN_LLM_ENDPOINT=https://api.groq.com/openai/v1/chat/completions
+DORAN_LLM_MODEL=openai/gpt-oss-20b
+GROQ_API_KEY=<Groq에서 발급한 키>
+DORAN_LLM_TIMEOUT_SECONDS=8
 ```
 
-`OPENROUTER_API_KEY`는 사용자가 발급받아 환경 변수로 넣어야 합니다. 키 값은 저장소에 적지 않습니다. 이 예시 발화는 기존 규칙에 걸리지 않아 LLM 분류 경로를 탑니다. 기본 제한 시간은 12초이며 `DORAN_LLM_TIMEOUT_SECONDS`로 0초 초과 60초 이하의 값을 지정할 수 있습니다. Android 디버그 앱의 서버 호출 제한 시간은 20초이므로 앱 시연에는 모델 제한 시간을 그보다 짧게 둡니다. 같은 환경 변수를 설정하고 저장소 루트에서 `python -m server.main`을 실행하면 앱의 요청에도 LLM 분류가 적용됩니다.
-
-OpenAI API를 포함한 다른 OpenAI 호환 공급자도 HTTPS 주소, 모델 이름, 해당 공급자의 API 키로 바꿔 연결할 수 있습니다.
-
 ```powershell
-$env:DORAN_LLM_ENDPOINT = "https://<provider>/v1/chat/completions"
-$env:DORAN_LLM_MODEL = "<model>"
-$env:DORAN_LLM_API_KEY = "<secret>"
+uv run --package doran-server python -m server.main
 ```
 
-실제 서비스에서는 서버 비밀 저장소에서 환경 변수를 주입해야 합니다. `.env`는 Git에서 제외합니다. 무료 모델의 응답 지연과 호출 제한은 차내 운영 기준으로 따로 검증해야 합니다.
+서버는 `.env`를 읽습니다. `DORAN_LLM_API_KEY`도 사용할 수 있지만 Groq 연결에는 `GROQ_API_KEY`를 권장합니다. 의도 분류에는 발화만 보내고, 문장 생성에는 답변 초안·발화·초안에 나온 후보 이름을 보냅니다. 원본 GPS 좌표와 차량·여행 기록 전체는 보내지 않습니다. `.env`와 키는 커밋하지 마세요.
+
+앱의 서버 호출 제한 시간은 20초입니다. 규칙에 없는 발화는 분류와 문장 생성으로 모델을 최대 두 번 호출할 수 있어 기본 제한 시간을 호출당 8초로 뒀습니다. [Groq 요금 및 한도](https://console.groq.com/docs/rate-limits)는 계정 설정과 서비스 상태에 따라 달라지므로 시연 전에 확인하세요. 다른 OpenAI 호환 공급자를 쓰려면 HTTPS 엔드포인트, 모델, `DORAN_LLM_API_KEY`를 바꾸면 됩니다.

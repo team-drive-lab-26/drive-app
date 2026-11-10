@@ -57,7 +57,8 @@ class AgentService:
         trips: TripRepository | None = None,
         knowledge: KnowledgeBase | None = None,
     ):
-        self.agent = DoranAgent(ChatCompletionsClassifier.from_env())
+        llm = ChatCompletionsClassifier.from_env()
+        self.agent = DoranAgent(llm, writer=llm)
         self.knowledge = knowledge
         self.places = places if places is not None else DEMO_PLACES
         self.rest_stops = rest_stops if rest_stops is not None else DEMO_REST_STOPS
@@ -305,6 +306,8 @@ def _export_llm_settings(settings: ServerSettings) -> None:
         "DORAN_LLM_ENDPOINT": settings.doran_llm_endpoint,
         "DORAN_LLM_MODEL": settings.doran_llm_model,
         "DORAN_LLM_API_KEY": settings.doran_llm_api_key,
+        "GROQ_API_KEY": settings.groq_api_key,
+        "DORAN_LLM_TIMEOUT_SECONDS": str(settings.doran_llm_timeout_seconds),
     }
     for key, value in values.items():
         if value:

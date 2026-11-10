@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     doran_llm_endpoint: str = ""
     doran_llm_model: str = ""
     doran_llm_api_key: str = ""
+    groq_api_key: str = ""
+    doran_llm_timeout_seconds: float = 8.0
     doran_region: str = "gangneung"
     doran_data_dir: Path = Field(default=REPO_ROOT / "ai" / "data")
 

@@ -1,13 +1,12 @@
 import json
 import unittest
-from pathlib import Path
-from urllib import request
-from threading import Thread
 from http.server import ThreadingHTTPServer
+from pathlib import Path
+from threading import Thread
 from unittest.mock import patch
+from urllib import request
 
 from server.main import AgentService, load_catalog, make_handler
-
 
 NOW = "2026-11-07T12:00:00+09:00"
 
@@ -101,6 +100,28 @@ class ServiceTests(unittest.TestCase):
         })
         self.assertEqual(result["status"], "ok")
         self.assertEqual(result["selected_place_id"], "p1")
+
+    def test_server_uses_llm_for_speech_without_changing_effects(self):
+        class Model:
+            def classify(self, utterance):
+                return "place"
+
+            def rewrite(self, draft, utterance, protected_terms):
+                self.received = (draft, utterance, protected_terms)
+                return "바닷가 식당에 들러 볼까?"
+
+        model = Model()
+        with patch("server.main.ChatCompletionsClassifier.from_env", return_value=model):
+            service = AgentService(places=self.places, rest_stops=[], tracks=[])
+        result = service.respond({
+            "session_id": "speech-llm", "now": NOW, "kind": "user_utterance",
+            "vehicle": {"gear": "D"}, "utterance": "근처 맛집 추천해 줘",
+        })
+        self.assertEqual(result["speech"], "바닷가 식당에 들러 볼까?")
+        self.assertEqual(result["caption"], result["speech"])
+        self.assertEqual(result["selected_place_id"], "p1")
+        self.assertEqual(result["effects"], [])
+        self.assertEqual(model.received[2], ["바닷가 식당"])
 
     def test_unverified_coordinates_do_not_emit_navigation(self):
         self.places[0].pop("latitude")

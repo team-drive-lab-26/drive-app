@@ -5,8 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Any
 
-from .llm import INTENTS, IntentClassifier
-
+from .llm import INTENTS, IntentClassifier, ResponseWriter
 
 YES = {"응", "네", "그래", "좋아", "확인", "해줘", "응 추가해", "네 추가해", "추가해"}
 NO = {"아니", "괜찮아", "취소", "됐어", "아니야"}
@@ -82,8 +81,9 @@ def _particle(name: str, batchim: str, no_batchim: str) -> str:
 class DoranAgent:
     """상태는 서버가 보관하고, 매 요청에 최신 맥락과 제안 이력을 전달한다."""
 
-    def __init__(self, classifier: IntentClassifier | None = None):
+    def __init__(self, classifier: IntentClassifier | None = None, writer: ResponseWriter | None = None):
         self.classifier = classifier
+        self.writer = writer
 
     def handle(self, payload: dict[str, Any]) -> dict[str, Any]:
         try:
@@ -95,12 +95,34 @@ class DoranAgent:
                 raise ValueError("vehicle.gear는 P, R, N, D 중 하나여야 합니다")
             kind = payload.get("kind")
             if kind == "vehicle_event":
-                return self._event(payload, now)
+                result = self._event(payload, now)
+                return self._write_response(payload, result)
             if kind == "user_utterance":
-                return self._utterance(payload, now)
+                result = self._utterance(payload, now)
+                return self._write_response(payload, result)
             raise ValueError("kind는 vehicle_event 또는 user_utterance여야 합니다")
         except (KeyError, TypeError, ValueError):
             return _response("invalid_input")
+
+    def _write_response(self, data: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:
+        if (not self.writer or data.get("network_available") is False
+                or result["status"] not in {"ok", "needs_confirmation"} or not result["speech"]):
+            return result
+        if any(command["type"] not in {"SET_PENDING_WAYPOINT"} for command in result["commands"]):
+            return result
+        draft = result["speech"]
+        catalog = (_list(data.get("places")) + _list(data.get("rest_stops")) + _list(data.get("tracks"))
+                   + _list(_mapping(data.get("trip")).get("mentions")))
+        names = [
+            item["name"] for item in catalog
+            if isinstance(item, dict) and isinstance(item.get("name"), str) and item["name"] in draft
+        ]
+        utterance = data.get("utterance") if data.get("kind") == "user_utterance" else ""
+        try:
+            speech = self.writer.rewrite(draft, utterance if isinstance(utterance, str) else "", names)
+        except Exception:
+            return result
+        return {**result, "speech": speech, "caption": speech.split(".")[0][:48]}
 
     def _event(self, data: dict[str, Any], now: datetime) -> dict[str, Any]:
         if not self._may_propose(data, now):

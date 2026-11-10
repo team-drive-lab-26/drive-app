@@ -2,7 +2,6 @@ import unittest
 
 from doran_ai import DoranAgent
 
-
 NOW = "2026-11-07T12:00:00+09:00"
 
 
@@ -108,6 +107,40 @@ class AgentTests(unittest.TestCase):
         place = {"id": "p1", "name": "바닷가 식당", "source": "tour_api", "category": "food"}
         result = self.agent.handle(request(places=[place]))
         self.assertEqual(result["status"], "unavailable")
+
+    def test_writer_changes_only_speech_and_caption(self):
+        class Writer:
+            def rewrite(self, draft, utterance, protected_terms):
+                self.args = (draft, utterance, protected_terms)
+                return "바닷가 식당에 들러 볼까?"
+
+        writer = Writer()
+        raw = self.agent.handle(request())
+        result = DoranAgent(writer=writer).handle(request())
+        self.assertEqual(result["speech"], "바닷가 식당에 들러 볼까?")
+        self.assertEqual(result["caption"], result["speech"])
+        self.assertEqual({k: v for k, v in result.items() if k not in {"speech", "caption"}},
+                         {k: v for k, v in raw.items() if k not in {"speech", "caption"}})
+        self.assertEqual(writer.args[2], ["바닷가 식당"])
+
+    def test_writer_skips_executed_commands_and_offline_requests(self):
+        class Writer:
+            def rewrite(self, *args):
+                raise AssertionError("이 경로에서 모델을 호출하면 안 됩니다")
+
+        agent = DoranAgent(writer=Writer())
+        self.assertIn("경유지로", agent.handle(request(utterance="응", pending_waypoint_id="p1"))["speech"])
+        self.assertEqual(
+            agent.handle(request(network_available=False)),
+            self.agent.handle(request(network_available=False)),
+        )
+
+    def test_writer_failure_keeps_rule_based_speech(self):
+        class Writer:
+            def rewrite(self, *args):
+                raise TimeoutError()
+
+        self.assertEqual(DoranAgent(writer=Writer()).handle(request()), self.agent.handle(request()))
 
     def test_quiet_mode_can_be_turned_back_on(self):
         quiet = self.agent.handle(request(utterance="조용히 해"))
