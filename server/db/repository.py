@@ -21,10 +21,48 @@ class TripRepository:
             db.flush()
         return trip
 
-    def add_event(self, session_id: str, type_: str, ref_id: str, *, name: str = "", category: str = "") -> None:
+    def add_event(
+        self,
+        session_id: str,
+        type_: str,
+        ref_id: str,
+        *,
+        name: str = "",
+        category: str = "",
+        latitude: float | None = None,
+        longitude: float | None = None,
+    ) -> None:
         with self._sessions.begin() as db:
             trip = self._trip(db, session_id)
-            db.add(TripEvent(trip_id=trip.id, type=type_, ref_id=ref_id, name=name, category=category))
+            db.add(
+                TripEvent(
+                    trip_id=trip.id,
+                    type=type_,
+                    ref_id=ref_id,
+                    name=name,
+                    category=category,
+                    latitude=latitude,
+                    longitude=longitude,
+                )
+            )
+
+    def list_events(self, session_id: str) -> list[dict[str, Any]]:
+        with self._sessions() as db:
+            events = db.scalars(
+                select(TripEvent).join(Trip).where(Trip.session_id == session_id).order_by(TripEvent.id)
+            )
+            return [
+                {
+                    "type": e.type,
+                    "id": e.ref_id,
+                    "name": e.name,
+                    "category": e.category,
+                    "latitude": e.latitude,
+                    "longitude": e.longitude,
+                    "recorded_at": e.recorded_at.isoformat(),
+                }
+                for e in events
+            ]
 
     def load_trip(self, session_id: str) -> dict[str, list[dict[str, Any]]]:
         trip: dict[str, list[dict[str, Any]]] = {key: [] for key in TRIP_KEYS.values()}

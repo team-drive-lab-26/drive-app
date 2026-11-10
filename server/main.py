@@ -13,6 +13,7 @@ from typing import Any
 
 from doran_ai import DoranAgent
 from doran_ai.knowledge import KnowledgeBase
+from doran_ai.llm import ChatCompletionsClassifier
 
 from server.config import ServerSettings
 from server.db import TripRepository, create_db_engine, session_factory
@@ -47,8 +48,17 @@ class Session:
 
 
 class AgentService:
-    def __init__(self, *, places=None, rest_stops=None, tracks=None, trips: TripRepository | None = None):
-        self.agent = DoranAgent()
+    def __init__(
+        self,
+        *,
+        places=None,
+        rest_stops=None,
+        tracks=None,
+        trips: TripRepository | None = None,
+        knowledge: KnowledgeBase | None = None,
+    ):
+        self.agent = DoranAgent(ChatCompletionsClassifier.from_env())
+        self.knowledge = knowledge
         self.places = places if places is not None else DEMO_PLACES
         self.rest_stops = rest_stops if rest_stops is not None else DEMO_REST_STOPS
         self.tracks = tracks if tracks is not None else DEMO_TRACKS
@@ -181,6 +191,9 @@ class AgentService:
         item_id = request.get("id")
         if not isinstance(item_id, str) or not item_id or len(item_id) > 128:
             raise ValueError("기록 ID가 올바르지 않습니다")
+        position = {"latitude": request.get("latitude"), "longitude": request.get("longitude")}
+        if any(v is not None for v in position.values()) and not self._coordinates(position):
+            raise ValueError("좌표가 올바르지 않습니다")
         with self.lock:
             session = self._session(session_id)
             if kind == "mention":
@@ -194,7 +207,12 @@ class AgentService:
                 session.trip["stops" if kind == "stop" else "capsules"].append(entry)
             if self.trips:
                 self.trips.add_event(
-                    session_id, kind, item_id, name=entry.get("name", ""), category=str(entry.get("category", ""))[:32]
+                    session_id,
+                    kind,
+                    item_id,
+                    name=entry.get("name", ""),
+                    category=str(entry.get("category", ""))[:32],
+                    **position,
                 )
             return {"status": "ok"}
 
@@ -282,19 +300,32 @@ def make_handler(service: AgentService):
     return Handler
 
 
+def _export_llm_settings(settings: ServerSettings) -> None:
+    values = {
+        "DORAN_LLM_ENDPOINT": settings.doran_llm_endpoint,
+        "DORAN_LLM_MODEL": settings.doran_llm_model,
+        "DORAN_LLM_API_KEY": settings.doran_llm_api_key,
+    }
+    for key, value in values.items():
+        if value:
+            os.environ.setdefault(key, value)
+
+
 def main() -> None:
     settings = ServerSettings()
+    _export_llm_settings(settings)
+    knowledge = KnowledgeBase.load(settings.region_dir)
     catalog_path = os.getenv("DORAN_CATALOG_FILE")
     if catalog_path:
         catalog = load_catalog(catalog_path)
     else:
-        knowledge = KnowledgeBase.load(settings.region_dir)
         catalog = knowledge.agent_catalog() if knowledge.places else {}
     upgrade(settings.doran_database_url)
     trips = TripRepository(session_factory(create_db_engine(settings.doran_database_url)), settings.doran_region)
-    service = AgentService(**catalog, trips=trips)
+    service = AgentService(**catalog, trips=trips, knowledge=knowledge)
     server = ThreadingHTTPServer(("127.0.0.1", 8765), make_handler(service))
-    print("Doran local demo server: http://127.0.0.1:8765", flush=True)
+    llm = os.getenv("DORAN_LLM_MODEL") or "없음(규칙만)"
+    print(f"Doran local demo server: http://127.0.0.1:8765  data={settings.doran_region} llm={llm}", flush=True)
     try:
         server.serve_forever()
     finally:

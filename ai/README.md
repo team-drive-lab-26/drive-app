@@ -18,7 +18,22 @@ python -m examples.run_scenario
 
 ## 선택형 LLM 연결
 
-장소, 도착, 휴게소, 음악, 기억, 다시 듣기 외의 표현을 분류할 때만 OpenAI 호환 chat completions 엔드포인트를 사용할 수 있습니다. 모델 공급사가 미정이라 기본값은 로컬 규칙입니다. 외부 모델에는 발화 텍스트만 보내고, 위치·차량 상태·여행 기록은 보내지 않습니다. 네트워크 오류가 나면 로컬 규칙으로 돌아갑니다.
+기존 규칙에 없는 표현을 분류할 때만 OpenAI 호환 chat completions 엔드포인트를 호출합니다. 분류 결과는 `place`, `arrival`, `rest`, `music`, `memory`, `replay`, `unknown` 중 하나로 제한합니다. 장소·곡·답변은 검증된 후보와 기존 규칙으로 결정합니다. 모델에는 발화 텍스트만 보내고 위치·차량 상태·여행 기록은 보내지 않습니다. 모델 호출에 실패하면 규칙 기반 처리로 돌아갑니다.
+
+원격 시연 모델은 OpenRouter의 [Nemotron 3.5 Lightning 무료 엔드포인트](https://openrouter.ai/nvidia/nemotron-3.5-lightning%3Afree/)로 확인했습니다. [NVIDIA가 공개한 모델](https://developer.nvidia.com/blog/nvidia-nemotron-3-5-lightning-delivers-fast-accurate-specialized-task-execution-for-long-running-agents/)이며, OpenRouter의 무료 요청에는 계정 API 키와 호출 제한이 있습니다. 모델 비용이 $0이어도 서비스 용량에 따라 요청이 거절될 수 있습니다.
+
+```powershell
+if (-not $env:OPENROUTER_API_KEY) { throw "OpenRouter API 키가 필요합니다" }
+$env:DORAN_LLM_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
+$env:DORAN_LLM_MODEL = "nvidia/nemotron-3.5-lightning:free"
+$env:DORAN_LLM_API_KEY = $env:OPENROUTER_API_KEY
+$env:DORAN_LLM_TIMEOUT_SECONDS = "12"
+Get-Content -Raw examples/llm_recommend_place.json | python -m doran_ai
+```
+
+`OPENROUTER_API_KEY`는 사용자가 발급받아 환경 변수로 넣어야 합니다. 키 값은 저장소에 적지 않습니다. 이 예시 발화는 기존 규칙에 걸리지 않아 LLM 분류 경로를 탑니다. 기본 제한 시간은 12초이며 `DORAN_LLM_TIMEOUT_SECONDS`로 0초 초과 60초 이하의 값을 지정할 수 있습니다. Android 디버그 앱의 서버 호출 제한 시간은 20초이므로 앱 시연에는 모델 제한 시간을 그보다 짧게 둡니다. 같은 환경 변수를 설정하고 저장소 루트에서 `python -m server.main`을 실행하면 앱의 요청에도 LLM 분류가 적용됩니다.
+
+OpenAI API를 포함한 다른 OpenAI 호환 공급자도 HTTPS 주소, 모델 이름, 해당 공급자의 API 키로 바꿔 연결할 수 있습니다.
 
 ```powershell
 $env:DORAN_LLM_ENDPOINT = "https://<provider>/v1/chat/completions"
@@ -26,4 +41,4 @@ $env:DORAN_LLM_MODEL = "<model>"
 $env:DORAN_LLM_API_KEY = "<secret>"
 ```
 
-실제 서비스에서는 서버 비밀 저장소에서 환경 변수를 주입해야 합니다. `.env`는 Git에서 제외합니다. 이 어댑터는 공급사 선택 후 해당 API로 별도 통합 검증이 필요합니다.
+실제 서비스에서는 서버 비밀 저장소에서 환경 변수를 주입해야 합니다. `.env`는 Git에서 제외합니다. 무료 모델의 응답 지연과 호출 제한은 차내 운영 기준으로 따로 검증해야 합니다.
