@@ -1,3 +1,4 @@
+import re
 import time
 from datetime import date, datetime
 from typing import Any
@@ -16,6 +17,17 @@ CONTENT_TYPES: dict[int, PlaceCategory] = {
     39: "food",
 }
 CAFE_CAT3 = "A05020900"
+CONTENT_TYPE_OF: dict[PlaceCategory, int] = {v: k for k, v in CONTENT_TYPES.items()} | {"cafe": 39}
+# detailIntro2에서 운영 시간으로 쓰는 필드. 콘텐츠 타입마다 이름이 다르다
+HOURS_FIELDS = {
+    12: ("usetime", "restdate"),
+    14: ("usetimeculture", "restdateculture"),
+    15: ("playtime", None),
+    28: ("usetimeleports", "restdateleports"),
+    38: ("opentime", "restdateshopping"),
+    39: ("opentimefood", "restdatefood"),
+}
+_TAG = re.compile(r"<[^>]+>")
 REQUEST_INTERVAL_S = 1.0
 MAX_RADIUS_M = 20000
 
@@ -34,6 +46,20 @@ def _items(payload: dict[str, Any]) -> list[dict[str, Any]]:
         return items
     item = items.get("item", []) if isinstance(items, dict) else []
     return item if isinstance(item, list) else [item]
+
+
+def _text(value: Any) -> str:
+    return " ".join(_TAG.sub(" ", str(value or "")).split())
+
+
+def _menu(item: dict[str, Any]) -> list[str]:
+    names: list[str] = []
+    for key in ("firstmenu", "treatmenu"):
+        for name in re.split(r"[,/·]", _text(item.get(key))):
+            name = name.strip()
+            if name and name not in names:
+                names.append(name)
+    return names[:8]
 
 
 def _date(value: str | None) -> date | None:
@@ -88,6 +114,46 @@ class TourApiClient:
         if not items:
             return None, None
         return _date(items[0].get("eventstartdate")), _date(items[0].get("eventenddate"))
+
+    def intro(self, place: Place) -> dict[str, Any]:
+        """운영 시간, 음식점 메뉴, 행사 기간을 Place 갱신 값으로 돌려준다."""
+        content_type = CONTENT_TYPE_OF[place.category]
+        items = self._get("detailIntro2", contentId=place.id.removeprefix("tour-"), contentTypeId=content_type)
+        if not items:
+            return {}
+        item = items[0]
+        hours_key, closed_key = HOURS_FIELDS[content_type]
+        hours = _text(item.get(hours_key))
+        if closed_key and (closed := _text(item.get(closed_key))):
+            hours = f"{hours} (휴무: {closed})" if hours else f"휴무: {closed}"
+        update: dict[str, Any] = {"opening_hours": hours[:200]}
+        if content_type == 39:
+            update["menu"] = _menu(item)
+        if content_type == 15:
+            update["event_start"] = _date(item.get("eventstartdate"))
+            update["event_end"] = _date(item.get("eventenddate"))
+        return update
+
+    def festivals(self, start: date, rows: int = 500) -> list[Place]:
+        """start 이후 시작했거나 시작할 행사. 끝난 행사는 호출한 쪽에서 거른다."""
+        places: list[Place] = []
+        page = 1
+        while True:
+            raw = self._get("searchFestival2", eventStartDate=start.strftime("%Y%m%d"), numOfRows=rows, pageNo=page)
+            for item in raw:
+                if item.get("mapx") and item.get("mapy"):
+                    place = self._place({**item, "contenttypeid": 15})
+                    places.append(
+                        place.model_copy(
+                            update={
+                                "event_start": _date(item.get("eventstartdate")),
+                                "event_end": _date(item.get("eventenddate")),
+                            }
+                        )
+                    )
+            if len(raw) < rows:
+                return places
+            page += 1
 
     @staticmethod
     def _place(item: dict[str, Any]) -> Place:

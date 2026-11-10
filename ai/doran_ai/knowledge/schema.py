@@ -21,6 +21,7 @@ class Place(Point):
     overview: str = ""
     image_url: str = ""
     opening_hours: str = ""
+    menu: list[str] = []
     event_start: date | None = None
     event_end: date | None = None
     route_distance_km: float | None = None
@@ -55,5 +56,7 @@ class Track(BaseModel):
 class Route(BaseModel):
     name: str
     approximate: bool
+    source: str = ""
+    anchors: list[Point] = []
     highways: dict[str, str] = {}
     points: list[Point] = Field(min_length=2)
