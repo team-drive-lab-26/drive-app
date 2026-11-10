@@ -26,6 +26,8 @@
 
 ## Android 시연 연결
 
-디버그 앱은 `BuildConfig.AGENT_BASE_URL=http://10.0.2.2:8765`를 사용하고 HTTP 통신을 허용합니다. 포트가 다르면 `app/local.properties`에 `doran.agentBaseUrl=http://10.0.2.2:<포트>`를 넣습니다. 앱은 Retrofit으로 호출하며 요청·응답 형식은 `core/network/AgentDtos.kt`에 있습니다. 릴리스 빌드의 주소는 비어 있어 운영 서버를 결정하기 전에는 AI 호출을 시작하지 않습니다. 앱은 정차 중 텍스트 입력 시연 패널, 주행 중 음성 입력 버튼·한 줄 자막을 사용합니다. 음성 인식과 TTS는 현재 Android 기본 서비스를 호출하므로 Pleos 전용 음성 서비스 연동과 실차 품질 검증이 남아 있습니다. 차량 기어 값도 아직 `FakeVehicleStateSource`에서 옵니다.
+디버그 앱은 `BuildConfig.AGENT_BASE_URL=http://10.0.2.2:8765`를 사용하고 HTTP 통신을 허용합니다. 포트가 다르면 `app/local.properties`에 `doran.agentBaseUrl=http://10.0.2.2:<포트>`를 넣습니다. 앱은 Retrofit으로 호출하며 요청·응답 형식은 `core/network/AgentDtos.kt`에 있습니다. 릴리스 빌드의 주소는 비어 있어 운영 서버를 결정하기 전에는 AI 호출을 시작하지 않습니다. 앱은 정차 중 텍스트 입력 시연 패널, 주행 중 음성 입력 버튼·한 줄 자막을 사용합니다. 기어와 문 열림은 Pleos Vehicle SDK에서, 남은 시간·경로 거리·경유지/목적지 도착은 NaviHelper에서 받습니다. 음성은 Pleos TextToSpeech·SpeechToText 온디바이스 모드를 쓰고, Pleos 음성 서비스가 없으면 Android 기본 음성으로 넘어갑니다.
 
-경유지 효과는 [Pleos NaviHelper v3.0.5 경유지 API](https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/NaviHelper/waypoint-settings)에 전달합니다. 앱은 SDK 연결 후 요청을 보내고 오류 콜백을 자막으로 표시합니다. 실제 경유지 반영 여부는 Pleos 전용 에뮬레이터에서 확인해야 합니다.
+앱은 차량 이벤트를 스스로 판단해 보냅니다. `trip_started`는 처음 D로 바꿨을 때 경로가 있으면 바로, 없으면 2분 뒤 한 번 보냅니다. `arrival_30m`은 남은 시간이 30분 이하가 되면 목적지마다 한 번, `continuous_drive`는 15분 이상 쉬지 않고 110분 달렸을 때, `reboarded`는 P에서 문을 열었다가 15분 넘게 정차한 뒤 닫았을 때 보냅니다. 요청의 `vehicle`에는 `doors_closed`, `last_stop_minutes`, `continuous_driving_minutes`를, `navigation`에는 `eta_minutes`, `arrival_local_time`, `minutes_since_departure`를 채웁니다. 집 위치를 아직 받지 않아 `distance_from_home_km`에는 출발 때 잡은 경로 거리를 넣습니다. `return_started`는 아직 보내지 않습니다. 내비 도착 뒤 10분 안에 P로 세우면 `/v1/trip/record`에 `stop`으로 기록하며, 앱이 추가한 경유지는 서버 장소 ID를, 그 밖의 장소는 `navi-<이름>`을 ID로 씁니다.
+
+경유지 효과는 [Pleos NaviHelper v3.0.5 경유지 API](https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/NaviHelper/waypoint-settings)에 전달합니다. 앱은 SDK 연결 후 요청을 보내고 오류 콜백을 자막으로 표시합니다. 서버가 `navi_poi_id`를 주지 않으면 경유지를 추가하지 않으므로, 수집 데이터에 내비 POI ID가 들어가야 실제 반영을 확인할 수 있습니다.
