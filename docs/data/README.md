@@ -4,8 +4,8 @@
 
 | 데이터 | 파일 | 출처 | 상태 |
 | --- | --- | --- | --- |
-| 관광지·문화시설·축제·레포츠·쇼핑·음식점 | `places.json` | 한국관광공사 TourAPI 4.0 `KorService2` (`locationBasedList2`, `detailCommon2`, `detailIntro2`) | 수집기 있음. 키 발급 후 파라미터 확인 필요 |
-| 고속도로 휴게소 위치·편의시설·대표음식 | `rest_stops.json` | 공공데이터포털 전국휴게소정보표준데이터(data.go.kr 15025446, 한국도로공사) | 원본 받는 코드만 있음. 응답 필드명 확인 후 변환 코드 작성 |
+| 관광지·문화시설·축제·레포츠·쇼핑·음식점 | `places.json` | 한국관광공사 TourAPI 4.0 `KorService2` (`locationBasedList2`, `detailCommon2`, `detailIntro2`) | 2026-11-10 Actions로 경로 표본 44곳 수집 확인 |
+| 고속도로 휴게소 위치·편의시설 | `rest_stops.json` | 공공데이터포털 전국휴게소정보표준데이터(data.go.kr 15025446, 한국도로공사) | 2026-11-10 전국 215곳 중 경로 20km 안 33곳 저장, 경로 노선·방향 일치 9곳. 대표음식 필드(`rprsntvRstrt`)는 전부 비어 있어 메뉴는 다른 출처 필요 |
 | 곡 목록 | `tracks.json` | 쓸 수 있는 API 없음 | 더미. 팀이 직접 큐레이션 |
 | 시연 경로 | `route.json` | Pleos NaviHelper 경로 또는 수작업 좌표 | 근사 좌표 |
 | 내비 경유지 ID(`navi_poi_id`) | 각 장소 항목 | Pleos NaviHelper | 확보 방법 미정. 없으면 경유지 추가 불가 |
@@ -29,7 +29,7 @@ uv run doran-collect --region gangneung --skip-details --limit 20  # 소개글 �
 uv run doran-collect --region gangneung --source restarea --limit 20  # 휴게소 원본 → raw/rest_areas.json
 ```
 
-휴게소는 원본(`raw/rest_areas.json`)을 먼저 받고, 실제 필드명을 확인한 뒤 `RestStop` 형식으로 바꾸는 코드를 `ai/doran_ai/collect/restarea.py`에 추가합니다. `raw/` 폴더는 커밋하지 않습니다.
+휴게소는 전국 원본을 `raw/`에 저장하고 경로 20km 안만 `rest_stops.json`에 남깁니다. 경로 위 판정은 `route.json`의 `highways`(노선명 → 방향)와 거리로 합니다. `raw/` 폴더는 커밋하지 않습니다. TourAPI는 `--limit`을 경로 지점 수 × 분류 수로 나눠 경로 전체에서 고르게 받습니다.
 
 ## 더미 데이터
 

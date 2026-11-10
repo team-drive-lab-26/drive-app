@@ -78,10 +78,11 @@ class KnowledgeBase:
             return [self.rest_stops[i] for i in candidates[:limit]]
         return [self.rest_stops[doc_id] for doc_id, _ in self._index.rank(query, candidates)[:limit]]
 
-    def agent_catalog(self) -> dict[str, list[dict[str, Any]]]:
-        """기존 DoranAgent·AgentService 입력 형식으로 변환한다."""
+    def agent_catalog(self, on: date | None = None) -> dict[str, list[dict[str, Any]]]:
+        """기존 DoranAgent·AgentService 입력 형식으로 변환한다. 끝난 행사는 뺀다."""
+        day = on or date.today()
         return {
-            "places": [p.model_dump(mode="json", exclude_none=True) for p in self.places.values()],
+            "places": [p.model_dump(mode="json", exclude_none=True) for p in self.places.values() if _open_on(p, day)],
             "rest_stops": [r.model_dump(mode="json", exclude_none=True) for r in self.rest_stops.values()],
             "tracks": [t.model_dump(mode="json") for t in self.tracks.values()],
         }
