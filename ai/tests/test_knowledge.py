@@ -1,7 +1,13 @@
 from datetime import date
 
 from doran_ai.knowledge import KnowledgeBase, Place, Point, RestStop, Route
-from doran_ai.knowledge.geo import distance_to_route_km, haversine_km, sample_route
+from doran_ai.knowledge.geo import (
+    distance_to_route_km,
+    haversine_km,
+    route_progress_km,
+    sample_route,
+    simplify_route,
+)
 from doran_ai.knowledge.store import write_json
 
 ROUTE = Route(
@@ -40,6 +46,22 @@ def test_sample_route_includes_both_ends():
     assert samples[0] == ROUTE.points[0]
     assert samples[-1] == ROUTE.points[-1]
     assert len(samples) >= 6
+
+
+def test_sample_route_spacing_ignores_short_segments():
+    dense = [Point(latitude=37.0, longitude=127.0 + i * 0.001) for i in range(1001)]  # 약 89km, 0.09km 간격
+    samples = sample_route(dense, 15)
+    assert 6 <= len(samples) <= 8
+    gaps = [haversine_km(a, b) for a, b in zip(samples, samples[1:-1], strict=False)]
+    assert all(14.5 < g < 15.5 for g in gaps)
+
+
+def test_route_progress_and_simplify():
+    progress, offset = route_progress_km(Point(latitude=37.01, longitude=127.5), ROUTE.points)
+    assert 44 < progress < 45 and 1.0 < offset < 1.2
+    dense = [Point(latitude=37.0, longitude=127.0 + i * 0.001) for i in range(1001)]
+    simple = simplify_route(dense, 1.0)
+    assert simple[0] == dense[0] and simple[-1] == dense[-1] and 80 < len(simple) <= 90
 
 
 def test_find_places_filters_category_and_route():

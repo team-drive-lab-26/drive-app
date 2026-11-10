@@ -43,7 +43,7 @@ uv run doran-collect         # TourAPI로 ai/data/<지역>/places.json 생성
 
 데이터 출처와 수집 명령은 [docs/data](docs/data/README.md), API 없이 시험할 때는 `DORAN_REGION=dummy`를 씁니다.
 
-에이전트가 읽는 데이터는 `ai/data/<지역>/`에 있습니다. `route.json`(시연 경로), `places.json`(TourAPI 수집 결과), `rest_stops.json`(휴게소), `tracks.json`(곡 목록)입니다. 서버는 `DORAN_CATALOG_FILE`이 없으면 이 폴더를 읽습니다. 현재 `route.json`은 주요 분기점 좌표를 이은 근사치라서 내비 실제 경로로 교체해야 합니다.
+에이전트가 읽는 데이터는 `ai/data/<지역>/`에 있습니다. `route.json`(시연 경로), `places.json`(TourAPI 수집 결과), `rest_stops.json`(휴게소), `tracks.json`(곡 목록)입니다. 서버는 `DORAN_CATALOG_FILE`이 없으면 이 폴더를 읽고, 요청마다 현재 위치와 발화에 맞춰 후보 순서를 정합니다. `route.json`은 OpenStreetMap 도로 경로라 Pleos 내비 경로와 다를 수 있습니다.
 
 ## 작업 방식
 
