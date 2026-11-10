@@ -10,7 +10,7 @@
 {"session_id":"demo-1","kind":"user_utterance","vehicle":{"gear":"D"},"utterance":"근처 어디가 좋아?"}
 ```
 
-응답은 AI 계약의 `status`, `speech`, `caption`, `proposal_type`, `selected_place_id`, `selected_track_id`, `cards`, `commands`에 `effects` 배열을 더합니다. `commands`는 서버 내부 상태 갱신 요청이고, `effects`만 앱이 처리합니다. `effects`에는 `ADD_WAYPOINT`(`place`: ID·이름·위도·경도·`navi_poi_id`·선택적 `navi_poi_sub_id`·주소), `PLAY_MUSIC`(`track_id`), `PLAY_CAPSULE`(`capsule_id`)가 나올 수 있습니다. `PLAY_MUSIC`·`PLAY_CAPSULE`은 재생 완료가 아닌 실행 요청입니다. 좌표나 내비 POI ID가 없는 장소는 내비 효과를 반환하지 않습니다. 관광 API의 콘텐츠 ID와 Pleos NaviHelper의 POI ID는 별개로 관리합니다.
+응답은 AI 계약의 `status`, `speech`, `caption`, `proposal_type`, `selected_place_id`, `selected_track_id`, `cards`, `commands`에 `effects` 배열을 더합니다. `commands`는 서버 내부 상태 갱신 요청이고, `effects`만 앱이 처리합니다. `effects`에는 `ADD_WAYPOINT`(`place`: ID·이름·위도·경도·선택적 `navi_poi_id`·`navi_poi_sub_id`·주소), `PLAY_MUSIC`(`track_id`), `PLAY_CAPSULE`(`capsule_id`)가 나올 수 있습니다. `PLAY_MUSIC`·`PLAY_CAPSULE`은 재생 완료가 아닌 실행 요청입니다. 좌표가 없는 장소는 내비 효과를 반환하지 않습니다. 내비 POI ID는 없으면 `null`이고, 앱은 좌표만으로 경유지를 추가합니다. 관광 API의 콘텐츠 ID와 Pleos NaviHelper의 POI ID는 별개로 관리합니다.
 
 정차 중 카드에서 장소를 고를 때는 `selected_place_id`를 보낼 수 있습니다. 서버는 같은 세션에서 최근 2분 안에 제시한 장소만 받습니다. 곡의 `selected_track_id`도 최근 5분 안에 추천한 곡과 일치해야 합니다. 오래된 ID나 다른 세션의 ID를 요청에 넣어도 선택 상태가 되살아나지 않습니다.
 
@@ -30,4 +30,4 @@
 
 앱은 차량 이벤트를 스스로 판단해 보냅니다. `trip_started`는 처음 D로 바꿨을 때 경로가 있으면 바로, 없으면 2분 뒤 한 번 보냅니다. `arrival_30m`은 남은 시간이 30분 이하가 되면 목적지마다 한 번, `continuous_drive`는 15분 이상 쉬지 않고 110분 달렸을 때, `reboarded`는 P에서 문을 열었다가 15분 넘게 정차한 뒤 닫았을 때 보냅니다. 요청의 `vehicle`에는 `doors_closed`, `last_stop_minutes`, `continuous_driving_minutes`를, `navigation`에는 `eta_minutes`, `arrival_local_time`, `minutes_since_departure`를 채웁니다. 집 위치를 아직 받지 않아 `distance_from_home_km`에는 출발 때 잡은 경로 거리를 넣습니다. `return_started`는 아직 보내지 않습니다. 내비 도착 뒤 10분 안에 P로 세우면 `/v1/trip/record`에 `stop`으로 기록하며, 앱이 추가한 경유지는 서버 장소 ID를, 그 밖의 장소는 `navi-<이름>`을 ID로 씁니다.
 
-경유지 효과는 [Pleos NaviHelper v3.0.5 경유지 API](https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/NaviHelper/waypoint-settings)에 전달합니다. 앱은 SDK 연결 후 요청을 보내고 오류 콜백을 자막으로 표시합니다. 서버가 `navi_poi_id`를 주지 않으면 경유지를 추가하지 않으므로, 수집 데이터에 내비 POI ID가 들어가야 실제 반영을 확인할 수 있습니다.
+경유지 효과는 [Pleos NaviHelper v3.0.5 경유지 API](https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/NaviHelper/waypoint-settings)에 전달합니다. 앱은 SDK 연결 후 요청을 보내고 오류 콜백을 자막으로 표시합니다. `navi_poi_id`가 없으면 좌표와 이름만 보냅니다. 에뮬레이터 내비에서 좌표만으로 경유지가 추가되는 것을 확인했습니다.

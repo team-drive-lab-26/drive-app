@@ -131,13 +131,15 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(result["status"], "unavailable")
         self.assertEqual(result["effects"], [])
 
-    def test_missing_navi_poi_id_does_not_emit_navigation(self):
+    def test_missing_navi_poi_id_emits_waypoint_with_coordinates(self):
         self.places[0].pop("navi_poi_id")
         base = {"session_id": "trip-5", "now": NOW, "kind": "user_utterance", "vehicle": {"gear": "D"}}
         self.service.respond({**base, "utterance": "근처 맛집 추천해 줘"})
         result = self.service.respond({**base, "utterance": "응"})
-        self.assertEqual(result["status"], "unavailable")
-        self.assertEqual(result["effects"], [])
+        place = result["effects"][0]["place"]
+        self.assertEqual(result["effects"][0]["type"], "ADD_WAYPOINT")
+        self.assertIsNone(place["navi_poi_id"])
+        self.assertEqual(place["latitude"], 37.41275833)
 
     def test_trip_record_is_retrieved(self):
         self.service.record({"session_id": "trip-4", "type": "mention", "id": "p1", "name": "별빛 카페", "category": "cafe"})

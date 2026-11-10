@@ -161,7 +161,8 @@ class AgentService:
                     session.pending_until = None
                 elif command_type == "ADD_WAYPOINT":
                     place = self._place(command["place_id"])
-                    if place and self._coordinates(place) and isinstance(place.get("navi_poi_id"), str) and place["navi_poi_id"]:
+                    # Pleos 내비는 POI ID 없이 좌표만으로도 경유지를 받는다
+                    if place and self._coordinates(place):
                         effects.append({"type": "ADD_WAYPOINT", "place": self._public_place(place)})
                     else:
                         result["status"] = "unavailable"
@@ -235,8 +236,9 @@ class AgentService:
 
     @staticmethod
     def _public_place(place: dict[str, Any]) -> dict[str, Any]:
-        result = {key: place[key] for key in ("id", "name", "latitude", "longitude", "navi_poi_id")}
-        result["navi_poi_sub_id"] = place.get("navi_poi_sub_id", "0")
+        result = {key: place[key] for key in ("id", "name", "latitude", "longitude")}
+        result["navi_poi_id"] = place.get("navi_poi_id") or None
+        result["navi_poi_sub_id"] = place.get("navi_poi_sub_id") or None
         result["address"] = place.get("address", "")
         return result
 

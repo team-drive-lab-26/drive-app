@@ -8,7 +8,7 @@
 | 고속도로 휴게소 위치·편의시설 | `rest_stops.json` | 공공데이터포털 전국휴게소정보표준데이터(data.go.kr 15025446, 한국도로공사) | 2026-11-10 전국 215곳 중 경로 20km 안 33곳 저장, 경로 노선·방향 일치 9곳. 대표음식 필드(`rprsntvRstrt`)는 전부 비어 있어 메뉴는 다른 출처 필요 |
 | 곡 목록 | `tracks.json` | 쓸 수 있는 API 없음 | 더미. 팀이 직접 큐레이션 |
 | 시연 경로 | `route.json` | Pleos NaviHelper 경로 또는 수작업 좌표 | 근사 좌표 |
-| 내비 경유지 ID(`navi_poi_id`) | 각 장소 항목 | Pleos NaviHelper | 확보 방법 미정. 없으면 경유지 추가 불가 |
+| 내비 경유지 ID(`navi_poi_id`) | 각 장소 항목 | Pleos NaviHelper | 확보 방법 미정. 없으면 좌표로 경유지를 추가한다 |
 
 ## 키
 
