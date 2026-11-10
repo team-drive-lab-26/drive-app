@@ -66,7 +66,8 @@ def main() -> None:
     region_dir = settings.region_dir
     if args.source == "restarea":
         key = settings.data_go_kr_service_key or settings.tourapi_service_key
-        save_raw(region_dir / "raw" / "rest_areas.json", fetch_raw(key, limit=args.limit))
+        raw_dir = region_dir / "raw"
+        save_raw(raw_dir / "rest_areas.json", fetch_raw(key, limit=args.limit, sample=raw_dir / "response_page1.json"))
         return
 
     route = TypeAdapter(Route).validate_json((region_dir / ROUTE_FILE).read_text(encoding="utf-8"))

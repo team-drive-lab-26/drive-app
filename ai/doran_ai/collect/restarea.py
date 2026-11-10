@@ -12,7 +12,9 @@ BASE_URL = "https://api.data.go.kr/openapi/tn_pubr_public_rest_area_api"
 REQUEST_INTERVAL_S = 1.0
 
 
-def fetch_raw(service_key: str, *, limit: int | None = None, rows: int = 100) -> list[dict[str, Any]]:
+def fetch_raw(
+    service_key: str, *, limit: int | None = None, rows: int = 100, sample: Path | None = None
+) -> list[dict[str, Any]]:
     if not service_key:
         raise TourApiError("DATA_GO_KR_SERVICE_KEY가 비어 있습니다")
     items: list[dict[str, Any]] = []
@@ -24,6 +26,9 @@ def fetch_raw(service_key: str, *, limit: int | None = None, rows: int = 100) ->
                 params={"serviceKey": service_key, "type": "json", "pageNo": page, "numOfRows": rows},
             )
             response.raise_for_status()
+            if sample and page == 1:
+                sample.parent.mkdir(parents=True, exist_ok=True)
+                sample.write_text(response.text, encoding="utf-8")
             batch = _items(response.json())
             items.extend(batch)
             if not batch or len(batch) < rows or (limit and len(items) >= limit):
