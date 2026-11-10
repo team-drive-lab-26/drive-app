@@ -30,7 +30,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.12"
-      - run: uv sync --locked
+      - run: uv sync --locked --all-packages
       - name: collect
         run: |
           args=(--region "${{ inputs.region }}" --source "${{ inputs.source }}" --limit "${{ inputs.limit }}")

@@ -29,7 +29,7 @@ JDK 17 또는 21로 실행합니다. Gradle 8.13은 JDK 25에서 실행되지 �
 Python 패키지는 [uv](https://docs.astral.sh/uv/) 워크스페이스로 관리합니다. 루트 `pyproject.toml`이 `ai`, `server`를 묶고 `uv.lock`으로 버전을 고정합니다. `pip install`로 따로 설치하지 않습니다.
 
 ```bash
-uv sync                      # Python 3.12와 의존성 설치
+uv sync --all-packages       # Python 3.12와 ai·server 의존성 설치
 cp .env.example .env         # 키 입력, 커밋 금지
 uv run pytest                # 전체 테스트
 uv run ruff check . && uv run ruff format .
