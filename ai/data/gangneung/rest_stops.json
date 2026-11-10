@@ -398,6 +398,29 @@
     "dummy": false
   },
   {
+    "latitude": 37.482835,
+    "longitude": 127.466735,
+    "id": "rest-45-남한강",
+    "name": "남한강 휴게소",
+    "source": "expressway_api",
+    "highway": "중부내륙선",
+    "direction": "양방향",
+    "menu": [],
+    "facilities": [
+      "주유소",
+      "전기차 충전소",
+      "쉼터",
+      "화장실",
+      "수유실",
+      "매점",
+      "음식점"
+    ],
+    "route_distance_km": 11.52,
+    "along_route": false,
+    "navi_poi_id": null,
+    "dummy": false
+  },
+  {
     "latitude": 37.279412,
     "longitude": 127.578083,
     "id": "rest-45-서여주(창원)",

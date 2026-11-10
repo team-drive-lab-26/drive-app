@@ -174,7 +174,7 @@ def main() -> None:
         client.close()
     write_json(region_dir / PLACES_FILE, places)
     along = sum(p.along_route for p in places)
-    print(f"{region_dir / PLACES_FILE}: {len(places)}곳 저장, 경로 {ALONG_ROUTE_KM}km 이내 {along}곳", file=sys.stderr)
+    print(f"{region_dir / PLACES_FILE}: {len(places)}곳 저장, 경로·목적지 주변 {along}곳", file=sys.stderr)
 
 
 if __name__ == "__main__":

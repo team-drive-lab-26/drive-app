@@ -15,6 +15,7 @@ from doran_ai import DoranAgent
 from doran_ai.knowledge import KnowledgeBase
 from doran_ai.llm import ChatCompletionsClassifier
 
+from server.candidates import CandidateRanker
 from server.config import ServerSettings
 from server.db import TripRepository, create_db_engine, session_factory
 from server.db.migrate import upgrade
@@ -64,6 +65,10 @@ class AgentService:
         self.rest_stops = rest_stops if rest_stops is not None else DEMO_REST_STOPS
         self.tracks = tracks if tracks is not None else DEMO_TRACKS
         self.trips = trips
+        # 수집 데이터와 경로가 있을 때만 요청마다 후보 순서를 다시 정한다
+        self.ranker = (
+            CandidateRanker(knowledge, self.places, self.rest_stops) if knowledge and knowledge.route else None
+        )
         self.sessions: dict[str, Session] = {}
         self.lock = RLock()
 
@@ -110,8 +115,8 @@ class AgentService:
                 "vehicle": request.get("vehicle"),
                 "navigation": request.get("navigation"),
                 "network_available": request.get("network_available", True),
-                "places": self.places,
-                "rest_stops": self.rest_stops,
+                "places": self.ranker.places(request, self.places) if self.ranker else self.places,
+                "rest_stops": self.ranker.rest_stops(request, self.rest_stops) if self.ranker else self.rest_stops,
                 "tracks": self.tracks,
                 "trip": session.trip,
                 "preferences": {"quiet": session.quiet},

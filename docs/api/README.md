@@ -4,7 +4,13 @@
 
 ## `POST /v1/agent/respond`
 
-요청 본문은 UTF-8 JSON입니다. 필수: `session_id`(영숫자·`_`·`-`, 1~64자), `kind`(`user_utterance`/`vehicle_event`), `vehicle.gear`(`P/R/N/D`). 발화면 `utterance`, 이벤트면 `event`가 필요합니다. `now`를 생략하면 서버 현지 시각을 씁니다. `navigation`과 차량의 추가 값은 [AI 계약](../ai/README.md)을 따릅니다.
+요청 본문은 UTF-8 JSON입니다. 필수: `session_id`(영숫자·`_`·`-`, 1~64자), `kind`(`user_utterance`/`vehicle_event`), `vehicle.gear`(`P/R/N/D`). 발화면 `utterance`, 이벤트면 `event`가 필요합니다. `now`를 생략하면 서버 현지 시각을 씁니다. `navigation`과 차량의 추가 값은 [AI 계약](../ai/README.md)을 따릅니다. 선택적으로 현재 위치 `position`(`latitude`·`longitude`)을 보낼 수 있습니다.
+
+서버는 요청마다 장소·휴게소 후보의 순서를 정해 AI에 넘깁니다(`server/candidates.py`). AI는 앞쪽 후보부터 고릅니다.
+
+- 현재 위치: `position`을 시연 경로(`ai/data/<지역>/route.json`)에 투영합니다. 없으면 `navigation.minutes_since_departure`와 `eta_minutes`의 비율로 경로 위 위치를 추정합니다. 둘 다 없으면 목적지 주변을 먼저 둡니다.
+- 장소: 이미 지나친 곳(현재 위치에서 15km 넘게 떨어진 곳)은 뒤로 보냅니다. 발화에 카페·축제·식사 단어가 있으면 그 분류를 앞에 두고, 이름·메뉴에 발화 단어가 들어 있는 곳, 소개글에 들어 있는 곳, 가까운 곳 순으로 정렬합니다. 축제·행사를 물었는데 앞으로 갈 길에 진행 중인 행사가 없으면 후보를 비워 "찾지 못했어"로 답하게 합니다.
+- 휴게소: 앞으로 나올 휴게소를 가까운 순서로 둡니다. 남은 시간을 알면 휴게소까지 걸리는 분을 `eta_minutes`로 붙입니다.
 
 ```json
 {"session_id":"demo-1","kind":"user_utterance","vehicle":{"gear":"D"},"utterance":"근처 어디가 좋아?"}

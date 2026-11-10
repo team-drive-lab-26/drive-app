@@ -38,7 +38,7 @@ class KnowledgeBase:
         self.tracks = {t.id: t for t in tracks}
         self.route = route
         self._index = BigramIndex(
-            {p.id: f"{p.name} {p.address} {p.overview}" for p in places}
+            {p.id: f"{p.name} {p.address} {' '.join(p.menu)} {p.overview}" for p in places}
             | {r.id: f"{r.name} {r.highway} {' '.join(r.menu)} {' '.join(r.facilities)}" for r in rest_stops}
         )
 
@@ -77,6 +77,10 @@ class KnowledgeBase:
         if not query:
             return [self.rest_stops[i] for i in candidates[:limit]]
         return [self.rest_stops[doc_id] for doc_id, _ in self._index.rank(query, candidates)[:limit]]
+
+    def match_scores(self, query: str, ids: list[str]) -> dict[str, float]:
+        """이름·주소·소개·메뉴에 query 글자가 겹치는 후보와 점수."""
+        return dict(self._index.rank(query, [i for i in ids if i in self._index.terms]))
 
     def agent_catalog(self, on: date | None = None) -> dict[str, list[dict[str, Any]]]:
         """기존 DoranAgent·AgentService 입력 형식으로 변환한다. 끝난 행사는 뺀다."""
