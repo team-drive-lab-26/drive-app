@@ -1,14 +1,42 @@
 {
   "name": "서울 → 강릉 (영동고속도로)",
   "approximate": true,
+  "highways": {
+    "경부선": "하행",
+    "영동선": "하행"
+  },
   "points": [
-    {"latitude": 37.5663, "longitude": 126.9779},
-    {"latitude": 37.2838, "longitude": 127.1062},
-    {"latitude": 37.2995, "longitude": 127.6440},
-    {"latitude": 37.3700, "longitude": 127.8890},
-    {"latitude": 37.5600, "longitude": 128.4300},
-    {"latitude": 37.6800, "longitude": 128.7200},
-    {"latitude": 37.7637, "longitude": 128.8996},
-    {"latitude": 37.7956, "longitude": 128.9183}
+    {
+      "latitude": 37.5663,
+      "longitude": 126.9779
+    },
+    {
+      "latitude": 37.2838,
+      "longitude": 127.1062
+    },
+    {
+      "latitude": 37.2995,
+      "longitude": 127.644
+    },
+    {
+      "latitude": 37.37,
+      "longitude": 127.889
+    },
+    {
+      "latitude": 37.56,
+      "longitude": 128.43
+    },
+    {
+      "latitude": 37.68,
+      "longitude": 128.72
+    },
+    {
+      "latitude": 37.7637,
+      "longitude": 128.8996
+    },
+    {
+      "latitude": 37.7956,
+      "longitude": 128.9183
+    }
   ]
 }

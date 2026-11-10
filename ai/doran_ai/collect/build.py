@@ -15,7 +15,7 @@ ROUTE_STEP_KM = 15
 ROUTE_RADIUS_M = 5000
 ALONG_ROUTE_KM = 5.0
 REST_STOP_ALONG_ROUTE_KM = 1.5
-APPROXIMATE_ROUTE_SLACK_KM = 4.0
+APPROXIMATE_ROUTE_SLACK_KM = 6.0
 REST_STOP_KEEP_KM = 20.0
 
 
@@ -43,6 +43,13 @@ def collect_places(client: TourApiClient, route: Route, *, with_details: bool, l
     return sorted(places, key=lambda p: p.route_distance_km or 0)
 
 
+def _on_route_highway(stop: RestStop, route: Route) -> bool:
+    if not route.highways:
+        return True
+    direction = route.highways.get(stop.highway)
+    return direction is not None and stop.direction in (direction, "양방향")
+
+
 def mark_rest_stops(stops: list[RestStop], route: Route) -> list[RestStop]:
     limit_km = REST_STOP_ALONG_ROUTE_KM + (APPROXIMATE_ROUTE_SLACK_KM if route.approximate else 0)
     marked = []
@@ -50,7 +57,8 @@ def mark_rest_stops(stops: list[RestStop], route: Route) -> list[RestStop]:
         distance = round(distance_to_route_km(stop, route.points), 2)
         if distance > REST_STOP_KEEP_KM:
             continue
-        marked.append(stop.model_copy(update={"route_distance_km": distance, "along_route": distance <= limit_km}))
+        along = distance <= limit_km and _on_route_highway(stop, route)
+        marked.append(stop.model_copy(update={"route_distance_km": distance, "along_route": along}))
     return sorted(marked, key=lambda s: s.route_distance_km or 0)
 
 

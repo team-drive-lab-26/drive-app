@@ -55,4 +55,5 @@ class Track(BaseModel):
 class Route(BaseModel):
     name: str
     approximate: bool
+    highways: dict[str, str] = {}
     points: list[Point] = Field(min_length=2)

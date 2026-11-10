@@ -48,3 +48,17 @@ def test_mark_rest_stops_keeps_nearby_only():
     marked = mark_rest_stops([near, far], route)
     assert [s.name for s in marked] == ["강릉(강릉) 휴게소"]
     assert marked[0].along_route
+
+
+def test_route_highways_filter_direction():
+    route = Route(
+        name="t",
+        approximate=True,
+        highways={"영동선": "하행"},
+        points=[Point(latitude=37.75, longitude=128.70), Point(latitude=37.76, longitude=128.90)],
+    )
+    down = to_rest_stop(ITEM)
+    up = to_rest_stop({**ITEM, "entrpsNm": "강릉(인천)", "roadRouteDrc": "상행"})
+    other = to_rest_stop({**ITEM, "entrpsNm": "다른노선", "roadRouteNm": "동해선"})
+    marked = {s.name: s.along_route for s in mark_rest_stops([down, up, other], route)}
+    assert marked == {"강릉(강릉) 휴게소": True, "강릉(인천) 휴게소": False, "다른노선 휴게소": False}
