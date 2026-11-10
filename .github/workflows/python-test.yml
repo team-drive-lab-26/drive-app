@@ -1,0 +1,19 @@
+name: python-test
+
+on:
+  push:
+    branches: [develop, main, "feature/**"]
+    paths: ["ai/**", "server/**", "pyproject.toml", "uv.lock", ".github/workflows/python-test.yml"]
+  pull_request:
+    paths: ["ai/**", "server/**", "pyproject.toml", "uv.lock"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - run: uv run pytest -q

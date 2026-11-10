@@ -34,3 +34,7 @@ uv run doran-collect --region gangneung --source restarea --limit 20  # 휴게�
 ## 더미 데이터
 
 `ai/data/dummy/`는 API 없이 에이전트를 시험하는 가짜 데이터입니다. 모든 항목에 `"dummy": true`가 있고 이름·소개·메뉴·내비 ID는 실제가 아닙니다. 서버에서 쓰려면 `.env`에 `DORAN_REGION=dummy`를 넣습니다. 제출·시연 영상에는 쓰지 않습니다.
+
+## GitHub Actions
+
+키는 저장소 Actions 시크릿(`TOURAPI_SERVICE_KEY`, `DATA_GO_KR_SERVICE_KEY`)에 있습니다. Actions 탭의 `collect-data`를 수동 실행하면 지역·API·개수를 골라 수집하고, 결과 폴더를 실행 결과의 Artifacts에서 내려받습니다. 저장소에 자동 커밋하지 않으므로 확인한 파일만 `ai/data/<지역>/`에 넣어 커밋합니다. `python-test`는 `ai`·`server` 변경을 push하면 pytest를 실행합니다.

@@ -1,0 +1,42 @@
+name: collect-data
+
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: ai/data 아래 지역 폴더
+        default: gangneung
+      source:
+        description: 수집할 API
+        type: choice
+        options: [tour, restarea]
+        default: tour
+      limit:
+        description: 최대 수집 개수
+        default: "20"
+      skip_details:
+        description: 소개글·행사 기간 조회 생략
+        type: boolean
+        default: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    env:
+      TOURAPI_SERVICE_KEY: ${{ secrets.TOURAPI_SERVICE_KEY }}
+      DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - name: collect
+        run: |
+          args=(--region "${{ inputs.region }}" --source "${{ inputs.source }}" --limit "${{ inputs.limit }}")
+          if [ "${{ inputs.skip_details }}" = "true" ]; then args+=(--skip-details); fi
+          uv run doran-collect "${args[@]}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: data-${{ inputs.region }}-${{ inputs.source }}
+          path: ai/data/${{ inputs.region }}/
