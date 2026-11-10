@@ -25,10 +25,11 @@ class TourApiError(RuntimeError):
 
 
 def _items(payload: dict[str, Any]) -> list[dict[str, Any]]:
-    header = payload.get("response", {}).get("header", {})
-    if header.get("resultCode") not in (None, "0000"):
+    root = payload.get("response", payload)
+    header = root.get("header", {})
+    if header.get("resultCode") not in (None, "0000", "00"):
         raise TourApiError(f"{header.get('resultCode')} {header.get('resultMsg')}")
-    items = payload.get("response", {}).get("body", {}).get("items") or {}
+    items = root.get("body", {}).get("items") or {}
     if isinstance(items, list):
         return items
     item = items.get("item", []) if isinstance(items, dict) else []

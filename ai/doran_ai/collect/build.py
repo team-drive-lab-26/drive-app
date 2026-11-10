@@ -1,4 +1,5 @@
 import argparse
+import math
 import sys
 
 from pydantic import TypeAdapter
@@ -7,26 +8,26 @@ from ..config import Settings
 from ..knowledge.geo import distance_to_route_km, sample_route
 from ..knowledge.schema import Place, RestStop, Route
 from ..knowledge.store import PLACES_FILE, REST_STOPS_FILE, ROUTE_FILE, write_json
-from .restarea import fetch_raw, save_raw
+from .restarea import fetch_raw, save_raw, to_rest_stop
 from .tourapi import CONTENT_TYPES, TourApiClient
 
 ROUTE_STEP_KM = 15
 ROUTE_RADIUS_M = 5000
 ALONG_ROUTE_KM = 5.0
 REST_STOP_ALONG_ROUTE_KM = 1.5
+APPROXIMATE_ROUTE_SLACK_KM = 4.0
+REST_STOP_KEEP_KM = 20.0
 
 
 def collect_places(client: TourApiClient, route: Route, *, with_details: bool, limit: int | None = None) -> list[Place]:
     found: dict[str, Place] = {}
     centers = sample_route(route.points, ROUTE_STEP_KM)
-    rows = min(limit, 100) if limit else 100
+    rows = max(1, math.ceil(limit / (len(centers) * len(CONTENT_TYPES)))) if limit else 100
     for i, center in enumerate(centers, 1):
         for content_type in CONTENT_TYPES:
             for place in client.nearby(center, ROUTE_RADIUS_M, content_type, rows=rows):
                 found.setdefault(place.id, place)
         print(f"경로 지점 {i}/{len(centers)}: 누적 {len(found)}곳", file=sys.stderr)
-        if limit and len(found) >= limit:
-            break
 
     places = []
     for place in found.values():
@@ -43,13 +44,14 @@ def collect_places(client: TourApiClient, route: Route, *, with_details: bool, l
 
 
 def mark_rest_stops(stops: list[RestStop], route: Route) -> list[RestStop]:
+    limit_km = REST_STOP_ALONG_ROUTE_KM + (APPROXIMATE_ROUTE_SLACK_KM if route.approximate else 0)
     marked = []
     for stop in stops:
         distance = round(distance_to_route_km(stop, route.points), 2)
-        marked.append(
-            stop.model_copy(update={"route_distance_km": distance, "along_route": distance <= REST_STOP_ALONG_ROUTE_KM})
-        )
-    return marked
+        if distance > REST_STOP_KEEP_KM:
+            continue
+        marked.append(stop.model_copy(update={"route_distance_km": distance, "along_route": distance <= limit_km}))
+    return sorted(marked, key=lambda s: s.route_distance_km or 0)
 
 
 def main() -> None:
@@ -64,25 +66,27 @@ def main() -> None:
     if args.region:
         settings.doran_region = args.region
     region_dir = settings.region_dir
+    route = TypeAdapter(Route).validate_json((region_dir / ROUTE_FILE).read_text(encoding="utf-8"))
+
     if args.source == "restarea":
         key = settings.data_go_kr_service_key or settings.tourapi_service_key
         raw_dir = region_dir / "raw"
-        save_raw(raw_dir / "rest_areas.json", fetch_raw(key, limit=args.limit, sample=raw_dir / "response_page1.json"))
+        raw = fetch_raw(key, sample=raw_dir / "response_page1.json")
+        save_raw(raw_dir / "rest_areas.json", raw)
+        stops = mark_rest_stops([s for s in map(to_rest_stop, raw) if s], route)
+        write_json(region_dir / REST_STOPS_FILE, stops)
+        along = sum(s.along_route for s in stops)
+        print(
+            f"{region_dir / REST_STOPS_FILE}: 경로 {REST_STOP_KEEP_KM}km 안 {len(stops)}곳, 경로 위 {along}곳",
+            file=sys.stderr,
+        )
         return
-
-    route = TypeAdapter(Route).validate_json((region_dir / ROUTE_FILE).read_text(encoding="utf-8"))
-
-    rest_stops_path = region_dir / REST_STOPS_FILE
-    if rest_stops_path.exists():
-        stops = TypeAdapter(list[RestStop]).validate_json(rest_stops_path.read_text(encoding="utf-8"))
-        write_json(rest_stops_path, mark_rest_stops(stops, route))
 
     client = TourApiClient(settings.tourapi_service_key)
     try:
         places = collect_places(client, route, with_details=not args.skip_details, limit=args.limit)
     finally:
         client.close()
-    places = places[: args.limit] if args.limit else places
     write_json(region_dir / PLACES_FILE, places)
     along = sum(p.along_route for p in places)
     print(f"{region_dir / PLACES_FILE}: {len(places)}곳 저장, 경로 {ALONG_ROUTE_KM}km 이내 {along}곳", file=sys.stderr)
