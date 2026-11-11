@@ -88,13 +88,13 @@ fun CharacterScreen(
             // 도란의 말. 화면의 제목처럼 맨 위에 둔다
             Text(
                 caption.ifBlank { CALL_HINT },
-                style = MaterialTheme.typography.headlineLarge,
+                style = if (hasCards) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineLarge,
                 color = if (caption.isBlank()) DoranPalette.InkSoft else DoranPalette.Ink,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .padding(start = 40.dp, top = 8.dp)
-                    .width(if (hasCards) maxWidth * 0.42f else maxWidth * 0.6f),
+                    .width(if (hasCards) headX + 170.dp - 64.dp else maxWidth * 0.6f),
             )
 
             TapeStrip(

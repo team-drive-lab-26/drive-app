@@ -23,7 +23,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.coerceIn
@@ -40,7 +39,6 @@ import com.doran.app.core.designsystem.RecordTape
 import com.doran.app.core.designsystem.RibbonButton
 import com.doran.app.core.designsystem.doranFeetOffset
 import com.doran.app.core.media.CapsuleRecorder
-import kotlinx.coroutines.delay
 
 // 마이크 크기를 이 간격으로 적어 테이프에 파형을 쓴다
 private const val SAMPLE_MS = 100L
@@ -57,12 +55,11 @@ fun RecordScreen(onClose: () -> Unit, viewModel: RecordViewModel = viewModel(fac
         if (ui.phase == RecordPhase.DONE) onClose()
     }
     val levels = remember { mutableStateListOf<Float>() }
-    val level by rememberUpdatedState(ui.level)
-    LaunchedEffect(ui.phase) {
-        while (ui.phase == RecordPhase.RECORDING && levels.size < CAPACITY) {
-            levels += level
-            delay(SAMPLE_MS)
-        }
+    // 느린 기기에서도 테이프 길이가 실제 시간과 맞게, 지난 시간만큼 칸을 채운다
+    LaunchedEffect(ui.elapsedMs) {
+        if (ui.phase != RecordPhase.RECORDING) return@LaunchedEffect
+        val due = (ui.elapsedMs / SAMPLE_MS).toInt().coerceAtMost(CAPACITY)
+        while (levels.size < due) levels += ui.level
     }
     val progress = (ui.elapsedMs.toFloat() / CapsuleRecorder.MAX_MS).coerceIn(0f, 1f)
 
