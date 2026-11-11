@@ -76,3 +76,17 @@ class TripRepository:
                     entry |= {"name": event.name, "category": event.category}
                 trip[TRIP_KEYS[event.type]].append(entry)
         return trip
+    
+    def list_trips(self) -> list[dict[str, Any]]:
+        with self._sessions() as db:
+            trips = db.scalars(select(Trip).order_by(Trip.started_at.desc()))
+            return [
+                {
+                    "session_id": trip.session_id,
+                    "region": trip.region,
+                    "started_at": trip.started_at.isoformat(),
+                    "ended_at": trip.ended_at.isoformat() if trip.ended_at else None,
+                    "event_count": len(trip.events),
+                }
+                for trip in trips
+            ]

@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import RLock
 from typing import Any
+from urllib.parse import parse_qs, urlsplit
 
 from doran_ai import DoranAgent
 from doran_ai.knowledge import KnowledgeBase
@@ -223,6 +224,15 @@ class AgentService:
                 )
             return {"status": "ok"}
 
+    def history(self, session_id: str | None) -> dict[str, Any]:
+        if not self.trips:
+            raise ValueError("기록 저장소가 없습니다")
+        if session_id is None:
+            return {"status": "ok", "trips": self.trips.list_trips()}
+        if not isinstance(session_id, str) or not SESSION_ID.fullmatch(session_id):
+            raise ValueError("session_id 형식이 올바르지 않습니다")
+        return {"status": "ok", "session_id": session_id, "events": self.trips.list_events(session_id)}
+
     def _session(self, session_id: str) -> Session:
         if session_id not in self.sessions:
             session = Session()
@@ -275,10 +285,18 @@ def load_catalog(path: str) -> dict[str, list[dict[str, Any]]]:
 def make_handler(service: AgentService):
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
-            if self.path != "/health":
-                self._send(404, {"error": "not_found"})
+            parsed = urlsplit(self.path)
+            if parsed.path == "/health":
+                self._send(200, {"status": "ok", "mode": "local_demo"})
                 return
-            self._send(200, {"status": "ok", "mode": "local_demo"})
+            if parsed.path == "/v1/trip/record":
+                try:
+                    values = parse_qs(parsed.query).get("session_id")
+                    self._send(200, service.history(values[0] if values else None))
+                except (ValueError, TypeError, KeyError):
+                    self._send(400, {"error": "invalid_request"})
+                return
+            self._send(404, {"error": "not_found"})
 
         def do_POST(self):
             if self.path not in {"/v1/agent/respond", "/v1/trip/record"}:
