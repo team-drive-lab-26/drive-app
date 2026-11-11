@@ -1,21 +1,37 @@
 package com.doran.app.core.designsystem
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
@@ -26,7 +42,7 @@ enum class RoadSide { LEFT, RIGHT, CENTER }
 
 /**
  * 길가 표지판 하나. [depth]는 0(바로 앞)~1(지평선). 멀수록 작고 높이 서 있다.
- * [hot]이면 도란이 지금 제안하는 곳이라 주황으로 칠한다.
+ * [hot]이면 도란이 지금 제안하거나 경유지로 넣은 곳이라 주황으로 칠한다.
  */
 data class RoadSign(
     val id: String,
@@ -67,41 +83,75 @@ private class RoadGeometry(val width: Float, val height: Float, horizonFraction:
             RoadSide.CENTER -> vx
         }
     }
+
+    /** 경로선이 그곳으로 휠 때 닿는 점. 길 가장자리 조금 안쪽 */
+    fun viaPoint(sign: RoadSign): Offset {
+        val y = groundY(sign.depth)
+        val half = halfWidth(y) * 0.82f
+        val x = when (sign.side) {
+            RoadSide.LEFT -> vx - half
+            RoadSide.RIGHT -> vx + half
+            RoadSide.CENTER -> vx
+        }
+        return Offset(x, y)
+    }
 }
 
+/** 표지판 판과 기둥. 처음 놓일 때 기둥이 땅에서 자라고 판이 떠오른다 */
 @Composable
-private fun SignPlate(sign: RoadSign) {
+private fun SignPost(sign: RoadSign, pole: Dp, onClick: (() -> Unit)?) {
+    val rise = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        // 가까운 것부터 차례로 선다
+        rise.animateTo(1f, tween(560, delayMillis = (sign.depth * 360).roundToInt() + 120, easing = FastOutSlowInEasing))
+    }
     val shape = RoundedCornerShape(12.dp)
-    val bg = if (sign.hot) DoranPalette.Accent else DoranPalette.SurfaceHigh
-    Column(
-        Modifier
-            .background(bg, shape)
-            .border(1.dp, if (sign.hot) DoranPalette.Accent else DoranPalette.LineStrong, shape)
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-    ) {
-        Text(sign.title, style = DoranText.sign, color = if (sign.hot) DoranPalette.OnAccent else DoranPalette.Ink, maxLines = 1)
-        if (sign.sub.isNotBlank()) {
-            Text(sign.sub, style = DoranText.signSub, color = if (sign.hot) DoranPalette.OnAccent else DoranPalette.InkSoft, maxLines = 1)
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            Modifier
+                .alpha(rise.value)
+                .background(if (sign.hot) DoranPalette.Accent else DoranPalette.SurfaceHigh, shape)
+                .border(1.dp, if (sign.hot) DoranPalette.Accent else DoranPalette.LineStrong, shape)
+                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+        ) {
+            Text(sign.title, style = DoranText.sign, color = if (sign.hot) DoranPalette.OnAccent else DoranPalette.Ink, maxLines = 1)
+            if (sign.sub.isNotBlank()) {
+                Text(sign.sub, style = DoranText.signSub, color = if (sign.hot) DoranPalette.OnAccent else DoranPalette.InkSoft, maxLines = 1)
+            }
         }
+        Box(
+            Modifier
+                .width(4.dp)
+                .height(pole * rise.value)
+                .background(if (sign.hot) DoranPalette.Accent else DoranPalette.InkMute),
+        )
     }
 }
 
 /**
- * 차 앞 도로. 지평선과 먼 산 능선, 원근으로 좁아지는 길, 지평선 끝 목적지까지 이어지는 귤색 경로선.
+ * 차 앞 도로. 지평선과 먼 산 능선, 원근으로 좁아지는 길, 지평선 끝 목적지까지 이어지는 주황 경로선.
  * 길가에 [signs]가 실제 거리만큼 떨어져 서 있다. [orb]는 내 차 자리(아래 가운데)에 놓인다.
- * [horizon]은 지평선 높이(화면 비율). 주행 화면은 [signs]를 비워 길과 경로선만 남긴다.
+ * [via]에 표지판 id를 주면 경로선이 그곳을 거쳐 가도록 휜다(경유지). [horizon]은 지평선 높이(화면 비율).
  */
 @Composable
 fun RoadScene(
     modifier: Modifier = Modifier,
     signs: List<RoadSign> = emptyList(),
     horizon: Float = 0.40f,
-    orbSize: Dp = 150.dp,
+    orbSize: Dp = 160.dp,
     orbLift: Dp = 28.dp,
     showRoute: Boolean = true,
+    via: String? = null,
+    onSignClick: ((String) -> Unit)? = null,
     orb: @Composable () -> Unit = {},
 ) {
     val density = LocalDensity.current
+    // 경유지가 생기면 곧은 선에서 휜 선으로 넘어간다
+    val viaSign = signs.firstOrNull { it.id == via }
+    val bend by animateFloatAsState(if (viaSign != null) 1f else 0f, tween(900, easing = FastOutSlowInEasing), label = "bend")
+    val pole = 64.dp
+
     BoxWithConstraints(modifier.fillMaxSize()) {
         val w = constraints.maxWidth.toFloat()
         val h = constraints.maxHeight.toFloat()
@@ -109,7 +159,6 @@ fun RoadScene(
         val orbPx = with(density) { orbSize.toPx() }
         val liftPx = with(density) { orbLift.toPx() }
         val margin = with(density) { 36.dp.toPx() }
-        val pole = with(density) { 64.dp.toPx() }
         val orbTop = h - liftPx - orbPx
 
         Canvas(Modifier.fillMaxSize()) {
@@ -143,53 +192,67 @@ fun RoadScene(
                 val y2 = g.groundY(d + 0.05f)
                 val k = g.scale(d)
                 for (side in listOf(-1f, 1f)) {
-                    val x1 = g.vx + side * g.halfWidth(y1) * 0.5f
-                    val x2 = g.vx + side * g.halfWidth(y2) * 0.5f
-                    drawLine(DoranPalette.LaneMark, Offset(x1, y1), Offset(x2, y2), strokeWidth = 5.dp.toPx() * k)
+                    drawLine(
+                        DoranPalette.LaneMark,
+                        Offset(g.vx + side * g.halfWidth(y1) * 0.5f, y1),
+                        Offset(g.vx + side * g.halfWidth(y2) * 0.5f, y2),
+                        strokeWidth = 5.dp.toPx() * k,
+                    )
                 }
             }
 
-            // 경로선. 도란 위에서 지평선 끝까지, 멀수록 가늘게
             if (showRoute) {
-                val from = orbTop + orbPx * 0.1f
-                val bw = 4.dp.toPx()
-                val tw = 1.dp.toPx()
-                val route = Path().apply {
-                    moveTo(g.vx - bw, from)
-                    lineTo(g.vx + bw, from)
-                    lineTo(g.vx + tw, g.horizon)
-                    lineTo(g.vx - tw, g.horizon)
-                    close()
+                val from = Offset(g.vx, orbTop + orbPx * 0.1f)
+                val end = Offset(g.vx, g.horizon)
+                val target = viaSign
+                if (target == null || bend <= 0.001f) {
+                    // 곧은 경로선. 멀수록 가늘게
+                    val bw = 4.dp.toPx()
+                    val tw = 1.dp.toPx()
+                    val route = Path().apply {
+                        moveTo(from.x - bw, from.y)
+                        lineTo(from.x + bw, from.y)
+                        lineTo(end.x + tw, end.y)
+                        lineTo(end.x - tw, end.y)
+                        close()
+                    }
+                    drawPath(route, DoranPalette.Accent.copy(alpha = 0.9f))
+                } else {
+                    // 경유지를 거쳐 가는 선. 곧은 선 위의 같은 높이 점에서 경유지 쪽으로 벌어진다
+                    val v = g.viaPoint(target)
+                    val straight = Offset(g.vx, v.y)
+                    val via = Offset(straight.x + (v.x - straight.x) * bend, v.y)
+                    val path = Path().apply {
+                        moveTo(from.x, from.y)
+                        quadraticTo(via.x, (from.y + via.y) / 2f, via.x, via.y)
+                        quadraticTo(via.x, (via.y + end.y) / 2f + (end.y - via.y) * 0.2f, end.x, end.y)
+                    }
+                    drawPath(path, DoranPalette.Accent.copy(alpha = 0.9f), style = Stroke(width = 6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+                    drawCircle(DoranPalette.Accent, radius = 9.dp.toPx() * bend, center = via)
+                    drawCircle(DoranPalette.Background, radius = 4.dp.toPx() * bend, center = via)
                 }
-                drawPath(route, DoranPalette.Accent.copy(alpha = 0.9f))
-            }
-
-            // 표지판 기둥
-            signs.forEach { sign ->
-                val x = g.poleX(sign, margin)
-                val y = g.groundY(sign.depth)
-                val k = g.scale(sign.depth)
-                drawLine(
-                    if (sign.hot) DoranPalette.Accent else DoranPalette.InkMute,
-                    Offset(x, y),
-                    Offset(x, y - pole * k),
-                    strokeWidth = 3.dp.toPx() * k,
-                )
             }
         }
 
-        // 표지판 판. 먼 것부터 놓아 가까운 것이 위에 온다
+        // 표지판. 먼 것부터 놓아 가까운 것이 위에 온다. 판과 기둥을 함께 줄여 기둥 끝이 길바닥에 닿게 한다
         val ordered = signs.sortedByDescending { it.depth }
-        Layout(content = { ordered.forEach { SignPlate(it) } }, modifier = Modifier.fillMaxSize()) { measurables, c ->
+        Layout(
+            content = {
+                ordered.forEach { sign ->
+                    key(sign.id) { SignPost(sign, pole, onSignClick?.let { click -> { click(sign.id) } }) }
+                }
+            },
+            modifier = Modifier.fillMaxSize(),
+        ) { measurables, c ->
             val placeables = measurables.map { it.measure(c.copy(minWidth = 0, minHeight = 0)) }
             layout(c.maxWidth, c.maxHeight) {
                 placeables.forEachIndexed { i, p ->
                     val sign = ordered[i]
                     val k = g.scale(sign.depth)
                     val x = g.poleX(sign, margin)
-                    val bottomY = g.groundY(sign.depth) - pole * k
-                    // 판은 기둥 끝에 아래 가운데를 맞추고 거리만큼 줄인다
-                    p.placeWithLayer((x - p.width / 2f).roundToInt(), (bottomY - p.height).roundToInt()) {
+                    // 기둥이 자라는 동안에도 판이 기둥 끝에 붙어 있게, 다 자랐을 때의 바닥 기준으로 놓는다
+                    val bottom = g.groundY(sign.depth)
+                    p.placeWithLayer((x - p.width / 2f).roundToInt(), (bottom - p.height).roundToInt()) {
                         scaleX = k
                         scaleY = k
                         transformOrigin = TransformOrigin(0.5f, 1f)

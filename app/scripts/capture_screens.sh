@@ -55,6 +55,14 @@ go --es say "'근처 맛집 추천해 줘'"
 shot 16_정차_제안카드 6
 go --es say "'휴게소 어디야'"
 shot 17_정차_휴게소카드 6
+go --es detour "'하남드림 휴게소'" --es caption "'하남드림 휴게소를 경유지로 넣었어'"
+shot 18_정차_경유지 4
+go --es screen day
+shot 19_정차_낮 3
+go --es gear D --es mood speaking --es caption "'하남드림까지 12km 남았어'"
+shot 19b_주행_낮 3
+go --es gear P --es mood none --es screen night --es caption -
+sleep 2
 
 go --es route record
 shot 20_녹음 4
@@ -76,6 +84,9 @@ adb shell input keyevent KEYCODE_BACK
 
 go --es route settings
 shot 50_설정 3
+go --es screen day
+shot 51_설정_낮 2
+go --es screen night
 adb shell input keyevent KEYCODE_BACK
 
 exit 0

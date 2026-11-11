@@ -18,6 +18,9 @@ interface DoranApi {
     @GET("v1/trip/record")
     suspend fun tripEvents(@Query("session_id") sessionId: String): TripEventsDto
 
+    @POST("v1/route/ahead")
+    suspend fun ahead(@Body request: AheadRequest): AheadResponse
+
     @GET("health")
     suspend fun health(): StatusResponse
 }

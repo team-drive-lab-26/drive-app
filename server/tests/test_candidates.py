@@ -75,3 +75,18 @@ def test_rest_stops_ahead_with_minutes():
     assert ids(ranked) == ["r-mid", "r-late", "r-early"]
     assert ranked[0]["eta_minutes"] == 4 and ranked[1]["eta_minutes"] == 28
     assert "eta_minutes" not in ranked[-1]
+
+
+def test_ahead_lists_next_rest_stops_with_remaining_km():
+    r, catalog = ranker()
+    # 88km 경로에서 30분 달렸고 60분 남았으면 약 29km 지점. 첫 휴게소(약 17km)는 지났다
+    request = {"navigation": {"minutes_since_departure": 30, "eta_minutes": 60}}
+    stops = r.ahead(request, catalog["rest_stops"])
+    assert [s["id"] for s in stops] == ["r-mid", "r-late"]
+    assert 14 < stops[0]["km"] < 16
+    assert stops[0]["km"] < stops[1]["km"]
+
+
+def test_ahead_is_empty_without_position_or_time():
+    r, catalog = ranker()
+    assert r.ahead({}, catalog["rest_stops"]) == []

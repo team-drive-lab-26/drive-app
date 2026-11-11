@@ -1,5 +1,6 @@
 package com.doran.app.core.designsystem
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,7 +38,7 @@ fun AgentDebugPanel(
 ) {
     var text by remember { mutableStateOf("") }
     val time = remember { SimpleDateFormat("HH:mm:ss", Locale.KOREA) }
-    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxWidth().background(DoranPalette.Surface).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         val navi = ui.navi
         val naviText = when {
             !navi.isConnected -> "내비 미연결"

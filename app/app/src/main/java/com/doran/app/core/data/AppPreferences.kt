@@ -13,9 +13,14 @@ data class Preferences(
     val wakeWord: Boolean = true,
     /** 켜 두면 도란이 먼저 제안하지 않는다 */
     val quiet: Boolean = false,
+    /** 화면 밝기. auto(07~19시 낮), day, night */
+    val screen: String = SCREEN_AUTO,
 ) {
     companion object {
         val DEFAULT_FAMILY = listOf("엄마", "아빠", "아이")
+        const val SCREEN_AUTO = "auto"
+        const val SCREEN_DAY = "day"
+        const val SCREEN_NIGHT = "night"
     }
 }
 
@@ -32,6 +37,7 @@ class AppPreferences(context: Context) {
             .putString(KEY_FAMILY, next.family.joinToString("\n"))
             .putBoolean(KEY_WAKE_WORD, next.wakeWord)
             .putBoolean(KEY_QUIET, next.quiet)
+            .putString(KEY_SCREEN, next.screen)
             .apply()
         _state.value = next
     }
@@ -43,6 +49,7 @@ class AppPreferences(context: Context) {
             ?.ifEmpty { null } ?: Preferences.DEFAULT_FAMILY,
         wakeWord = prefs.getBoolean(KEY_WAKE_WORD, true),
         quiet = prefs.getBoolean(KEY_QUIET, false),
+        screen = prefs.getString(KEY_SCREEN, null) ?: Preferences.SCREEN_AUTO,
     )
 
     private companion object {
@@ -50,5 +57,6 @@ class AppPreferences(context: Context) {
         const val KEY_FAMILY = "family"
         const val KEY_WAKE_WORD = "wake_word"
         const val KEY_QUIET = "quiet"
+        const val KEY_SCREEN = "screen"
     }
 }

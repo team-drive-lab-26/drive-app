@@ -1,5 +1,11 @@
 package com.doran.app
 
+import com.doran.app.core.data.Preferences
+import java.time.ZoneId
+import java.time.LocalTime
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.LaunchedEffect
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -63,6 +69,21 @@ class MainActivity : ComponentActivity() {
             currentSessionId = (application as DoranApplication).container.tripCoordinator.sessionId,
         )
         setContent {
+            val prefs by preferences.state.collectAsStateWithLifecycle()
+            // 자동이면 1분마다 시각을 다시 보고 낮·밤을 바꾼다
+            val minute by produceState(0) {
+                while (true) {
+                    value += 1
+                    delay(60_000)
+                }
+            }
+            LaunchedEffect(prefs.screen, minute) {
+                DoranPalette.isDay = when (prefs.screen) {
+                    Preferences.SCREEN_DAY -> true
+                    Preferences.SCREEN_NIGHT -> false
+                    else -> LocalTime.now(ZoneId.of("Asia/Seoul")).hour in 7..18
+                }
+            }
             DoranTheme {
                 val ui by viewModel.uiState.collectAsStateWithLifecycle()
                 Column(Modifier.fillMaxSize().background(DoranPalette.Background)) {
@@ -112,6 +133,8 @@ class MainActivity : ComponentActivity() {
         intent.getStringExtra("say")?.let(viewModel::submitUtterance)
         intent.getStringExtra("event")?.let(viewModel::sendDemoEvent)
         if (intent.getStringExtra("demo") == "tape") viewModel.seedDemoTape()
+        intent.getStringExtra("screen")?.let { mode -> preferences.update { it.copy(screen = mode) } }
+        intent.getStringExtra("detour")?.let(viewModel::showDebugDetour)
         intent.getStringExtra("caption")?.let { viewModel.showDebugCaption(if (it == "-") "" else it) }
     }
 

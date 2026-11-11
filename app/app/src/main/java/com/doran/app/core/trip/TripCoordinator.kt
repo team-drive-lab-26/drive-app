@@ -62,6 +62,8 @@ data class TripConversationState(
     val demoEtaMinutes: Int? = null,
     /** 앞길 표지판. 지금은 시연 촬영 때만 채운다. 내비가 경로 위 휴게소 거리를 주면 여기로 받는다 */
     val ahead: List<AheadStop> = emptyList(),
+    /** 내비에 넣은 경유지 이름. 정차 화면 경로선이 이곳으로 휜다. 도착하면 비운다 */
+    val detour: String = "",
 )
 
 /**
@@ -130,7 +132,9 @@ class TripCoordinator(
             var tick = 0
             while (isActive) {
                 delay(TICK_MS)
-                if (tick++ % 2 == 0) navi.refresh()
+                if (tick % 2 == 0) navi.refresh()
+                // 정차 화면 길가 표지판. 1분마다 앞으로 나올 휴게소 거리를 받아 온다
+                if (tick++ % 2 == 0) refreshAhead()
                 handle(detector.update(vehicle.state.value, navi.state.value, clock()))
             }
         }
@@ -165,6 +169,9 @@ class TripCoordinator(
 
     /** 디버그용. 화면 촬영 때 자막 한 줄을 바로 띄운다 */
     fun showDebugCaption(text: String) = setCaption(text)
+
+    /** 디버그용. 경유지를 넣은 것처럼 경로선을 휘게 한다 */
+    fun showDebugDetour(name: String) = _state.update { it.copy(detour = name, cards = emptyList()) }
 
     fun cancelListening() {
         voice.cancelListening()
@@ -315,6 +322,20 @@ class TripCoordinator(
         }
     }
 
+    private fun refreshAhead() {
+        if (!agent.isConfigured || !navi.state.value.isRouteActive) return
+        scope.launch {
+            try {
+                val stops = agent.ahead(navigationDto())
+                if (stops.isNotEmpty()) _state.update { it.copy(ahead = stops) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                log("앞길 휴게소 조회 실패")
+            }
+        }
+    }
+
     private fun addMark(kind: TapeKind, label: String, id: String = UUID.randomUUID().toString(), seconds: Int = 0) {
         _state.update { it.copy(tape = it.tape + TapeMark(id, kind, label, clock(), seconds)) }
     }
@@ -396,6 +417,7 @@ class TripCoordinator(
         log("정차 기록: ${stop.placeName}")
         _state.update { it.copy(lastPlaceName = stop.placeName) }
         addMark(TapeKind.STOP, stop.placeName)
+        if (_state.value.detour == stop.placeName) _state.update { it.copy(detour = "") }
         // 들른 곳에서 목소리를 남기자고 먼저 묻는다. 답은 호출어 없이 바로 듣는다
         awaitingRecordAnswer = true
         say("${stop.placeName}에 도착했어. 여기서 한마디 남길래?", onDone = ::listen)
@@ -470,7 +492,10 @@ class TripCoordinator(
             navi.addWaypoint(waypoint) { result ->
                 log("경유지 요청: ${waypoint.name} → ${result::class.simpleName}")
                 when (result) {
-                    NaviCommandResult.Submitted -> cheer()
+                    NaviCommandResult.Submitted -> {
+                        _state.update { it.copy(detour = waypoint.name) }
+                        cheer()
+                    }
                     NaviCommandResult.NotConnected -> say("내비 연결을 확인해 줘.")
                     NaviCommandResult.Failed -> say("경유지를 추가하지 못했어.")
                 }

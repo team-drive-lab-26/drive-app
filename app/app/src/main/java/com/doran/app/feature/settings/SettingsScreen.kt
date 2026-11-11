@@ -40,6 +40,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.doran.app.BuildConfig
 import com.doran.app.DoranApplication
 import com.doran.app.core.data.AppPreferences
+import com.doran.app.core.data.Preferences
 import com.doran.app.core.designsystem.BackBar
 import com.doran.app.core.designsystem.DoranPalette
 import com.doran.app.core.designsystem.DoranSecondaryButton
@@ -53,6 +54,8 @@ class SettingsViewModel(private val preferences: AppPreferences, private val coo
         preferences.update { it.copy(wakeWord = enabled) }
         if (enabled) coordinator.enableHandsFree() else coordinator.disableHandsFree()
     }
+
+    fun setScreen(mode: String) = preferences.update { it.copy(screen = mode) }
 
     fun addFamily(name: String) {
         val clean = name.trim().take(MAX_NAME)
@@ -105,6 +108,15 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = viewModel(
                     uncheckedThumbColor = DoranPalette.InkSoft,
                 ),
             )
+        }
+        HorizontalDivider(color = DoranPalette.Line)
+
+        Section("화면", "자동이면 아침 7시부터 저녁 7시까지 밝은 화면, 그 밖에는 어두운 화면이에요.") {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                listOf(Preferences.SCREEN_AUTO to "자동", Preferences.SCREEN_DAY to "낮", Preferences.SCREEN_NIGHT to "밤").forEach { (mode, label) ->
+                    DoranSecondaryButton(text = label, selected = prefs.screen == mode, onClick = { viewModel.setScreen(mode) })
+                }
+            }
         }
         HorizontalDivider(color = DoranPalette.Line)
 

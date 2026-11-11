@@ -49,7 +49,8 @@ fun DrivingScreen(
             .fillMaxSize()
             .background(DoranPalette.Background),
     ) {
-        RoadScene(horizon = 0.5f, orbSize = 150.dp) {
+        // 정차 화면과 같은 지평선·도란 크기라 기어가 바뀌어도 길은 그 자리에 있고 표지판만 걷힌다
+        RoadScene(horizon = 0.40f, orbSize = 160.dp) {
             TappableDoran(face = face, onCall = onCall, onLongPress = onLongPress, still = true, modifier = Modifier.fillMaxSize())
         }
         if (routeLine.isNotBlank()) {

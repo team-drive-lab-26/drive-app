@@ -30,6 +30,20 @@
 
 `stop`의 `id`가 후보 목록(장소·휴게소)에 있으면 서버가 이름과 좌표를 채웁니다. 목록에 없는 곳은 `name`만 함께 보내면 이름이 남습니다. `capsule`의 `name`에는 남긴 사람을 넣습니다.
 
+## `POST /v1/route/ahead`
+
+정차 화면 길가 표지판에 세울 휴게소를 돌려줍니다. 앞으로 나올 휴게소를 가까운 순서로 최대 3곳, 경로를 따라 남은 거리(`km`)와 함께 줍니다.
+
+```json
+{"navigation":{"eta_minutes":120,"minutes_since_departure":40}}
+```
+
+```json
+{"status":"ok","stops":[{"id":"rest-1","name":"횡성 휴게소","km":34.2}]}
+```
+
+현재 위치는 `position`이 오면 경로에 투영하고, 없으면 `minutes_since_departure`와 `eta_minutes` 비율로 추정합니다. 둘 다 없으면 빈 목록입니다. 앱은 내비 경로가 있을 때 1분마다 부릅니다.
+
 ## `GET /v1/trip/record`
 
 `session_id` 없이 부르면 여행 목록을 최근 순으로 돌려줍니다.

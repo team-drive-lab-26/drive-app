@@ -3,7 +3,11 @@ package com.doran.app.core.designsystem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -14,32 +18,38 @@ import androidx.compose.ui.unit.sp
 import com.doran.app.R
 
 /**
- * 도란 색. 화면은 차 앞 도로를 펼친 장면이다. 차 실내와 밤 귀갓길에 눈부시지 않게 어두운 바탕을 쓴다.
+ * 도란 색. 화면은 차 앞 도로를 펼친 장면이다.
+ * 밤(기본)은 어두운 하늘과 길, 낮은 밝은 하늘과 아스팔트 길. 구조는 같고 색만 바뀐다.
  * 색은 도란(주황 빛)과 경로선, 지금 고를 것에만 쓴다. 가족 목소리 핀은 사람마다 정한 색.
  */
 object DoranPalette {
-    val Background = Color(0xFF0B1018)
-    val Ridge = Color(0xFF121A26)
-    val Road = Color(0xFF161E2A)
-    val RoadEdge = Color(0xFF2E3A4C)
-    val LaneMark = Color(0xFF3A475B)
-    val Surface = Color(0xFF151C27)
-    val SurfaceHigh = Color(0xFF1B2431)
-    val Line = Color(0xFF273244)
-    val LineStrong = Color(0xFF3A475B)
-    val Ink = Color(0xFFEEF2F7)
-    val InkSoft = Color(0xFFA5B0C1)
-    val InkMute = Color(0xFF7F8A9C)
+    /** 낮 화면인지. MainActivity가 설정(자동·낮·밤)과 시각으로 정한다 */
+    var isDay by mutableStateOf(false)
+
+    private fun pick(night: Long, day: Long) = Color(if (isDay) day else night)
+
+    val Background get() = pick(0xFF0B1018, 0xFFE8EDF2)
+    val Ridge get() = pick(0xFF121A26, 0xFFD2DAE2)
+    val Road get() = pick(0xFF161E2A, 0xFF4A5361)
+    val RoadEdge get() = pick(0xFF2E3A4C, 0xFFF4F6F8)
+    val LaneMark get() = pick(0xFF3A475B, 0xFFE3E8ED)
+    val Surface get() = pick(0xFF151C27, 0xFFFFFFFF)
+    val SurfaceHigh get() = pick(0xFF1B2431, 0xFFFFFFFF)
+    val Line get() = pick(0xFF273244, 0xFFD3DAE2)
+    val LineStrong get() = pick(0xFF3A475B, 0xFFB7C1CC)
+    val Ink get() = pick(0xFFEEF2F7, 0xFF10151C)
+    val InkSoft get() = pick(0xFFA5B0C1, 0xFF465261)
+    val InkMute get() = pick(0xFF7F8A9C, 0xFF5E6977)
 
     // 도란과 경로선. 지금 고를 것도 이 색
-    val Accent = Color(0xFFFF7A32)
+    val Accent get() = pick(0xFFFF7A32, 0xFFF26A1F)
     val AccentSoft = Color(0xFFFFB27E)
     val AccentDeep = Color(0xFFC9531C)
     val OnAccent = Color(0xFF14100D)
 
     // 예전 이름. 디버그 화면이 쓴다
-    val Body = Accent
-    val Head = Accent
+    val Body get() = Accent
+    val Head get() = Accent
 }
 
 /** 가족마다 고정 색. 같은 사람은 어느 화면에서나 같은 색이다 */
@@ -77,19 +87,35 @@ object DoranText {
     val signSub = TextStyle(fontFamily = Suit, fontSize = 20.sp, lineHeight = 24.sp, fontWeight = FontWeight.Medium, fontFeatureSettings = TABULAR)
 }
 
-private val DoranColors = darkColorScheme(
-    background = DoranPalette.Background,
-    surface = DoranPalette.Surface,
-    surfaceContainerHighest = DoranPalette.SurfaceHigh,
-    onBackground = DoranPalette.Ink,
-    onSurface = DoranPalette.Ink,
-    onSurfaceVariant = DoranPalette.InkSoft,
-    outline = DoranPalette.LineStrong,
-    outlineVariant = DoranPalette.Line,
-    primary = DoranPalette.Accent,
-    onPrimary = DoranPalette.OnAccent,
-    secondary = DoranPalette.Accent,
-)
+private fun doranColors() = if (DoranPalette.isDay) {
+    lightColorScheme(
+        background = DoranPalette.Background,
+        surface = DoranPalette.Surface,
+        surfaceContainerHighest = DoranPalette.SurfaceHigh,
+        onBackground = DoranPalette.Ink,
+        onSurface = DoranPalette.Ink,
+        onSurfaceVariant = DoranPalette.InkSoft,
+        outline = DoranPalette.LineStrong,
+        outlineVariant = DoranPalette.Line,
+        primary = DoranPalette.Accent,
+        onPrimary = DoranPalette.OnAccent,
+        secondary = DoranPalette.Accent,
+    )
+} else {
+    darkColorScheme(
+        background = DoranPalette.Background,
+        surface = DoranPalette.Surface,
+        surfaceContainerHighest = DoranPalette.SurfaceHigh,
+        onBackground = DoranPalette.Ink,
+        onSurface = DoranPalette.Ink,
+        onSurfaceVariant = DoranPalette.InkSoft,
+        outline = DoranPalette.LineStrong,
+        outlineVariant = DoranPalette.Line,
+        primary = DoranPalette.Accent,
+        onPrimary = DoranPalette.OnAccent,
+        secondary = DoranPalette.Accent,
+    )
+}
 
 // 주행 자막 34sp 이상, 본문 18sp 이상. 운전 중 한 번에 읽히는 크기
 private val DoranType = Typography(
@@ -105,5 +131,5 @@ private val DoranType = Typography(
 
 @Composable
 fun DoranTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = DoranColors, typography = DoranType, content = content)
+    MaterialTheme(colorScheme = doranColors(), typography = DoranType, content = content)
 }

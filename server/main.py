@@ -238,6 +238,13 @@ class AgentService:
                 )
             return {"status": "ok"}
 
+    def ahead(self, request: dict[str, Any]) -> dict[str, Any]:
+        """앱 정차 화면의 길가 표지판. 앞으로 나올 휴게소와 남은 거리"""
+        if not isinstance(request, dict):
+            raise ValueError("JSON 객체가 필요합니다")
+        stops = self.ranker.ahead(request, self.rest_stops) if self.ranker else []
+        return {"status": "ok", "stops": stops}
+
     def history(self, session_id: str | None) -> dict[str, Any]:
         if not self.trips:
             raise ValueError("기록 저장소가 없습니다")
@@ -368,7 +375,7 @@ def make_handler(service: AgentService):
             self._send(404, {"error": "not_found"})
 
         def do_POST(self):
-            if self.path not in {"/v1/agent/respond", "/v1/trip/record"}:
+            if self.path not in {"/v1/agent/respond", "/v1/trip/record", "/v1/route/ahead"}:
                 self._send(404, {"error": "not_found"})
                 return
             try:
@@ -376,7 +383,12 @@ def make_handler(service: AgentService):
                 if not 0 < length <= 65536:
                     raise ValueError("요청 크기가 올바르지 않습니다")
                 payload = json.loads(self.rfile.read(length))
-                result = service.respond(payload) if self.path == "/v1/agent/respond" else service.record(payload)
+                handlers = {
+                    "/v1/agent/respond": service.respond,
+                    "/v1/trip/record": service.record,
+                    "/v1/route/ahead": service.ahead,
+                }
+                result = handlers[self.path](payload)
                 self._send(200, result)
             except (ValueError, TypeError, KeyError, json.JSONDecodeError):
                 self._send(400, {"error": "invalid_request"})

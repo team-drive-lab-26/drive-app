@@ -1,6 +1,9 @@
 package com.doran.app.navigation
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.compose.NavHost
@@ -61,7 +64,15 @@ fun DoranNavHost(ui: MainUiState, actions: DoranActions, onboarded: Boolean) {
         actions.onRouteHandled()
     }
 
-    NavHost(navController = nav, startDestination = if (onboarded) Route.Character else Route.Onboarding) {
+    // 정차·주행 화면은 같은 길을 그려서, 짧게 겹쳐 바꾸면 길은 그대로 있고 표지판과 패널만 걷히거나 솟는다
+    NavHost(
+        navController = nav,
+        startDestination = if (onboarded) Route.Character else Route.Onboarding,
+        enterTransition = { fadeIn(tween(320)) },
+        exitTransition = { fadeOut(tween(260)) },
+        popEnterTransition = { fadeIn(tween(320)) },
+        popExitTransition = { fadeOut(tween(260)) },
+    ) {
         composable<Route.Onboarding> {
             OnboardingScreen(
                 onDone = {
@@ -84,7 +95,7 @@ fun DoranNavHost(ui: MainUiState, actions: DoranActions, onboarded: Boolean) {
                 face = ui.face,
                 caption = ui.caption,
                 routeLine = ui.routeLine,
-                ahead = RoadAhead(destination = ui.destination, arrival = ui.arrivalClock, stops = ui.conversation.ahead),
+                ahead = RoadAhead(destination = ui.destination, arrival = ui.arrivalClock, stops = ui.conversation.ahead, detour = ui.conversation.detour),
                 cards = ui.conversation.cards,
                 links = HomeLinks(
                     onAlbum = { nav.navigate(Route.Album) },

@@ -1,5 +1,7 @@
 package com.doran.app.core.data
 
+import com.doran.app.core.model.AheadStop
+import com.doran.app.core.network.AheadRequest
 import com.doran.app.core.network.AgentRequest
 import com.doran.app.core.network.AgentResponse
 import com.doran.app.core.network.DoranApi
@@ -81,6 +83,10 @@ class AgentRepository(baseUrl: String) {
     suspend fun trips(): List<TripSummaryDto> = requireApi().trips().trips
 
     suspend fun tripEvents(sessionId: String): TripEventsDto = requireApi().tripEvents(sessionId)
+
+    /** 앞으로 나올 휴게소와 남은 거리 */
+    suspend fun ahead(navigation: NavigationDto): List<AheadStop> =
+        requireApi().ahead(AheadRequest(navigation)).stops.filter { it.name.isNotBlank() }.map { AheadStop(it.name, it.km) }
 
     private fun requireApi(): DoranApi = checkNotNull(api) { "AI 서버 주소가 없어" }
 }

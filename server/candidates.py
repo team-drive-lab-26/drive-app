@@ -110,6 +110,20 @@ class CandidateRanker:
             ),
         )
 
+    def ahead(self, request: dict[str, Any], rest_stops: list[dict[str, Any]], limit: int = 3) -> list[dict[str, Any]]:
+        """앞으로 나올 휴게소를 가까운 순서로, 경로를 따라 남은 거리(km)와 함께. 현재 위치를 모르면 빈 목록."""
+        progress, _ = self.current_progress(request)
+        if progress is None:
+            return []
+        ahead = sorted(
+            (s for s in rest_stops if self.progress.get(s["id"], -1.0) > progress),
+            key=lambda s: self.progress[s["id"]],
+        )
+        return [
+            {"id": s["id"], "name": s.get("name", ""), "km": round(self.progress[s["id"]] - progress, 1)}
+            for s in ahead[:limit]
+        ]
+
     def rest_stops(self, request: dict[str, Any], rest_stops: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """앞으로 나올 휴게소를 가까운 순서로. 남은 시간을 알면 휴게소까지 걸리는 시간을 붙인다."""
         progress, _ = self.current_progress(request)

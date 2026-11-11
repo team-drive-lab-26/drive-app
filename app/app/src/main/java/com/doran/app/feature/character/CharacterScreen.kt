@@ -37,8 +37,8 @@ import com.doran.app.core.model.AheadStop
 /** 정차 화면에서 바로 갈 수 있는 곳 */
 class HomeLinks(val onAlbum: () -> Unit, val onMusic: () -> Unit, val onSettings: () -> Unit)
 
-/** 앞길 정보. 목적지, 도착 시각, 길가 휴게소 */
-class RoadAhead(val destination: String, val arrival: String, val stops: List<AheadStop>)
+/** 앞길 정보. 목적지, 도착 시각, 길가 휴게소, 내비에 넣은 경유지 */
+class RoadAhead(val destination: String, val arrival: String, val stops: List<AheadStop>, val detour: String = "")
 
 /**
  * 정차 중 첫 화면. 차 앞 도로가 화면 전체에 펼쳐지고 도란은 내 차 자리에 있다.
@@ -63,8 +63,14 @@ fun CharacterScreen(
     val signs = buildList {
         // 제안이 떠 있으면 앞길 표지판은 제안한 곳만 남긴다. 이미 길가에 있는 곳을 제안하면 그 표지판을 주황으로 바꾼다
         ahead.stops.forEach { stop ->
-            val hot = stop.name in cardNames
-            if (shown.isEmpty() || hot) add(RoadSign("ahead-${stop.name}", stop.name, "${"%.0f".format(stop.km)}km", depthForKm(stop.km), RoadSide.RIGHT, hot))
+            val isDetour = stop.name == ahead.detour
+            val hot = stop.name in cardNames || isDetour
+            val sub = if (isDetour) "경유지 · ${"%.0f".format(stop.km)}km" else "${"%.0f".format(stop.km)}km"
+            if (shown.isEmpty() || hot) add(RoadSign("ahead-${stop.name}", stop.name, sub, depthForKm(stop.km), RoadSide.RIGHT, hot))
+        }
+        // 길가 표지판에 없는 곳을 경유지로 넣었으면 왼쪽 길가에 세운다
+        if (ahead.detour.isNotBlank() && ahead.stops.none { it.name == ahead.detour }) {
+            add(RoadSign("ahead-${ahead.detour}", ahead.detour, "경유지", 0.16f, RoadSide.LEFT, hot = true))
         }
         if (ahead.destination.isNotBlank()) add(RoadSign("dest", ahead.destination, ahead.arrival, 0.97f, RoadSide.CENTER))
         shown.filter { card -> ahead.stops.none { it.name == card.name } }.forEachIndexed { i, card ->
@@ -73,14 +79,15 @@ fun CharacterScreen(
             add(RoadSign("card-${card.name}", card.name, sub, 0.10f + 0.15f * i, RoadSide.LEFT, hot = true))
         }
     }
-    val orb by animateDpAsState(if (shown.isEmpty()) 170.dp else 130.dp, tween(420), label = "orb")
+    val orb by animateDpAsState(if (shown.isEmpty()) 160.dp else 130.dp, tween(420), label = "orb")
+    val via = ahead.detour.takeIf { it.isNotBlank() }?.let { "ahead-$it" }
 
     Box(
         Modifier
             .fillMaxSize()
             .background(DoranPalette.Background),
     ) {
-        RoadScene(signs = signs, horizon = 0.40f, orbSize = orb) {
+        RoadScene(signs = signs, horizon = 0.40f, orbSize = orb, via = via) {
             TappableDoran(face = face, onCall = onCall, onLongPress = onLongPress, modifier = Modifier.fillMaxSize())
         }
         TopBar(

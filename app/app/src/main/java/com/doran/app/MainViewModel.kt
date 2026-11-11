@@ -121,6 +121,7 @@ class MainViewModel(
     fun seedDemoTape() = coordinator.seedDemoTape()
     fun stopTalking() = coordinator.stopTalking()
     fun showDebugCaption(text: String) = coordinator.showDebugCaption(text)
+    fun showDebugDetour(name: String) = coordinator.showDebugDetour(name)
     fun overrideGear(gear: Gear) = coordinator.overrideGear(gear)
     fun overrideDoorOpen(open: Boolean) = coordinator.overrideDoorOpen(open)
 

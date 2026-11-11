@@ -138,3 +138,13 @@ data class TripEventsDto(
     /** [위도, 경도] 목록. 앨범 지도에 그리는 길 */
     val route: List<List<Double>> = emptyList(),
 )
+
+/** 정차 화면 길가 표지판용. 서버가 남은 시간·출발 후 시간으로 지금 위치를 추정한다 */
+@Serializable
+data class AheadRequest(val navigation: NavigationDto)
+
+@Serializable
+data class AheadStopDto(val id: String = "", val name: String = "", val km: Double = 0.0)
+
+@Serializable
+data class AheadResponse(val status: String = "", val stops: List<AheadStopDto> = emptyList())
