@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -87,7 +88,8 @@ fun AlbumMapScreen(onBack: () -> Unit, viewModel: AlbumMapViewModel = viewModel(
 
     Column(Modifier.fillMaxSize().background(DoranPalette.Background)) {
         BackBar(back = "여행 테이프", title = ui.title, onBack = onBack)
-        Box(Modifier.weight(1f).fillMaxWidth()) {
+        Row(Modifier.weight(1f).fillMaxWidth()) {
+        Box(Modifier.weight(1f).fillMaxHeight()) {
             Canvas(
                 Modifier
                     .fillMaxSize()
@@ -144,13 +146,19 @@ fun AlbumMapScreen(onBack: () -> Unit, viewModel: AlbumMapViewModel = viewModel(
                 )
             }
 
-            ui.selected?.let { pin ->
-                PinPanel(
-                    pin = pin,
-                    playingId = playing,
-                    onToggle = viewModel::toggle,
-                    modifier = Modifier.align(Alignment.TopEnd).padding(end = 40.dp, top = 8.dp).width(440.dp),
-                )
+        }
+            // 고른 곳 칸은 지도 옆 자리를 따로 둬서 지도 끝(도착)을 가리지 않는다
+            Column(Modifier.width(460.dp).fillMaxHeight().padding(end = 40.dp, top = 8.dp, bottom = 24.dp)) {
+                val pin = ui.selected
+                if (pin != null) {
+                    PinPanel(pin = pin, playingId = playing, onToggle = viewModel::toggle, modifier = Modifier.fillMaxWidth())
+                } else if (!ui.loading && ui.pins.isNotEmpty()) {
+                    Text(
+                        "지도 핀이나 아래 테이프를 누르면 그곳에서 남긴 목소리를 들을 수 있어.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = DoranPalette.InkSoft,
+                    )
+                }
             }
         }
         TapeStrip(

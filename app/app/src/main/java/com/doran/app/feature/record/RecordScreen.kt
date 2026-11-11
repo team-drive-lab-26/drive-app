@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.coerceIn
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -115,7 +116,7 @@ fun RecordScreen(onClose: () -> Unit, viewModel: RecordViewModel = viewModel(fac
             bandHeight = band,
             modifier = Modifier.offset(y = bandTop),
         )
-        Box(Modifier.offset(x = headX - doran / 2, y = bandTop - doranFeetOffset(doran))) {
+        Box(Modifier.offset(x = (headX - doran / 2).coerceIn(0.dp, maxWidth - doran), y = bandTop - doranFeetOffset(doran))) {
             DoranCharacter(
                 mood = when (ui.phase) {
                     RecordPhase.RECORDING -> DoranMood.LISTENING

@@ -81,14 +81,14 @@ fun CharacterScreen(
             val hasCards = cards.isNotEmpty()
             val band = 156.dp
             val bandTop = maxHeight - band - 44.dp - 36.dp
-            val playhead by animateFloatAsState(if (hasCards) 0.27f else 0.46f, tween(520), label = "playhead")
-            val doran by animateDpAsState(if (hasCards) minOf(bandTop * 0.55f, 250.dp) else minOf(bandTop * 0.78f, 330.dp), tween(520), label = "doran")
+            val playhead by animateFloatAsState(if (hasCards) 0.27f else 0.52f, tween(520), label = "playhead")
+            val doran by animateDpAsState(if (hasCards) minOf(bandTop * 0.55f, 250.dp) else minOf(bandTop * 0.92f, 420.dp), tween(520), label = "doran")
             val headX = maxWidth * playhead
 
             // 도란의 말. 화면의 제목처럼 맨 위에 둔다
             Text(
                 caption.ifBlank { CALL_HINT },
-                style = MaterialTheme.typography.displayMedium,
+                style = MaterialTheme.typography.headlineLarge,
                 color = if (caption.isBlank()) DoranPalette.InkSoft else DoranPalette.Ink,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,

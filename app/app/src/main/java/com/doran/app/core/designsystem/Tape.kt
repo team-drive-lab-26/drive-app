@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -120,57 +121,81 @@ private fun DrawScope.drawLevels(levels: List<Float>, capacity: Int, width: Floa
     }
 }
 
-@Composable
-private fun TapeItem(entry: TapeEntry, bandHeight: Dp, selected: Boolean, onSelect: (() -> Unit)?) {
-    val click = if (onSelect != null) Modifier.clickable(onClick = onSelect) else Modifier
-    when (entry.kind) {
-        TapeKind.VOICE -> {
-            val color = FamilyRibbon.colorFor(entry.title)
-            val width = maxOf(entry.seconds.coerceIn(3, 15) * 6, 54).dp
-            Column(
-                click.height(bandHeight).padding(vertical = 18.dp).wrapContentWidth(),
-                verticalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(entry.title, style = DoranText.labelSmall, color = color, maxLines = 1)
-                Waveform(seed = entry.id.hashCode(), color = color, modifier = Modifier.width(width).height(44.dp))
-                Text(
-                    if (entry.seconds > 0) "${entry.seconds}초" else entry.time,
-                    style = DoranText.time,
-                    color = DoranPalette.TapeTextSoft,
-                )
-            }
+/** 들른 곳 하나와 거기서 남긴 목소리들. 목소리는 장소 아래에 붙여 테이프 폭을 아낀다 */
+private class TapeGroup(val head: TapeEntry?, val voices: List<TapeEntry>) {
+    val id: String get() = head?.id ?: voices.first().id
+    val atMillis: Long get() = head?.atMillis ?: voices.first().atMillis
+}
+
+private fun group(entries: List<TapeEntry>): List<TapeGroup> {
+    val out = mutableListOf<TapeGroup>()
+    var head: TapeEntry? = null
+    var voices = mutableListOf<TapeEntry>()
+    fun flush() {
+        if (head != null || voices.isNotEmpty()) out += TapeGroup(head, voices)
+        head = null
+        voices = mutableListOf()
+    }
+    entries.forEach { entry ->
+        if (entry.kind == TapeKind.VOICE) voices += entry else {
+            flush()
+            head = entry
         }
-        TapeKind.STOP, TapeKind.START -> {
-            val tick = if (selected) DoranPalette.Head else DoranPalette.TapeText
-            Row(click.height(bandHeight)) {
-                Box(
-                    Modifier
-                        .padding(vertical = if (entry.kind == TapeKind.START) 28.dp else 14.dp)
-                        .width(if (selected) 6.dp else 3.dp)
-                        .fillMaxHeight()
-                        .background(tick),
-                )
-                Spacer(Modifier.width(12.dp))
-                Column(
-                    Modifier.fillMaxHeight().padding(vertical = 22.dp).widthIn(max = 260.dp),
-                    verticalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        entry.title,
-                        style = DoranText.label,
-                        color = DoranPalette.TapeText,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(entry.time, style = DoranText.time, color = DoranPalette.TapeTextSoft)
-                }
+    }
+    flush()
+    return out
+}
+
+@Composable
+private fun VoiceChip(entry: TapeEntry) {
+    val color = FamilyRibbon.colorFor(entry.title)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Waveform(
+            seed = entry.id.hashCode(),
+            color = color,
+            modifier = Modifier.width(maxOf(entry.seconds.coerceIn(3, 15) * 4, 30).dp).height(30.dp),
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(entry.title, style = DoranText.labelSmall, color = color, maxLines = 1)
+    }
+}
+
+@Composable
+private fun TapeItem(group: TapeGroup, bandHeight: Dp, selected: Boolean, onSelect: (() -> Unit)?) {
+    val click = if (onSelect != null) Modifier.clickable(onClick = onSelect) else Modifier
+    val head = group.head
+    Row(click.height(bandHeight)) {
+        if (head != null) {
+            Box(
+                Modifier
+                    .padding(vertical = if (head.kind == TapeKind.START) 28.dp else 14.dp)
+                    .width(if (selected) 6.dp else 3.dp)
+                    .fillMaxHeight()
+                    .background(if (selected) DoranPalette.Head else DoranPalette.TapeText),
+            )
+            Spacer(Modifier.width(12.dp))
+        }
+        Column(
+            Modifier.fillMaxHeight().padding(vertical = 18.dp).widthIn(max = 300.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                head?.title ?: "",
+                style = DoranText.label,
+                color = DoranPalette.TapeText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                group.voices.take(3).forEach { VoiceChip(it) }
             }
+            Text(head?.time ?: "", style = DoranText.time, color = DoranPalette.TapeTextSoft)
         }
     }
 }
 
 /**
- * 여행 테이프. 왼쪽부터 지나온 곳과 남긴 목소리가 시간 순서로 놓이고, [playhead](0~1) 오른쪽은 빈 테이프다.
+ * 여행 테이프. 왼쪽부터 지나온 곳(남긴 목소리는 그 아래)이 시간 순서로 놓이고, [playhead](0~1) 오른쪽은 빈 테이프다.
  * 빈 테이프 끝에 목적지([endTitle])와 남은 시간을 적는다. 항목이 많으면 오래된 것부터 왼쪽으로 밀려난다.
  * [onSelect]를 주면 항목을 눌러 고를 수 있다(앨범 지도와 맞물릴 때).
  */
@@ -200,12 +225,13 @@ fun TapeStrip(
         val gap = with(density) { 20.dp.roundToPx() }
         val left = with(density) { 28.dp.roundToPx() }
         val right = (if (showHead) headX else widthPx).roundToInt() - with(density) { 28.dp.roundToPx() }
-        val first = entries.minOfOrNull { it.atMillis } ?: 0L
-        val last = entries.maxOfOrNull { it.atMillis } ?: 0L
+        val groups = remember(entries) { group(entries) }
+        val first = groups.minOfOrNull { it.atMillis } ?: 0L
+        val last = groups.maxOfOrNull { it.atMillis } ?: 0L
         Layout(
             content = {
-                entries.forEach { entry ->
-                    TapeItem(entry, bandHeight, entry.id == selectedId, onSelect?.let { select -> { select(entry.id) } })
+                groups.forEach { g ->
+                    TapeItem(g, bandHeight, g.id == selectedId, onSelect?.let { select -> { select(g.id) } })
                 }
             },
             modifier = Modifier.height(bandHeight).fillMaxWidth(),
@@ -214,8 +240,8 @@ fun TapeStrip(
             val span = (right - left).coerceAtLeast(1)
             // 시간 비율대로 놓고, 겹치면 오른쪽으로 민다
             val xs = IntArray(placeables.size)
-            entries.forEachIndexed { i, entry ->
-                val t = if (last > first) (entry.atMillis - first).toFloat() / (last - first) else 0f
+            groups.forEachIndexed { i, g ->
+                val t = if (last > first) (g.atMillis - first).toFloat() / (last - first) else 0f
                 val desired = left + (t * span * 0.86f).roundToInt()
                 xs[i] = if (i == 0) desired else maxOf(desired, xs[i - 1] + placeables[i - 1].width + gap)
             }
