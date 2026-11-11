@@ -59,10 +59,15 @@ fun CharacterScreen(
     onDismissCards: () -> Unit,
 ) {
     val shown = cards.take(2)
+    val cardNames = shown.map { it.name }.toSet()
     val signs = buildList {
-        ahead.stops.forEach { add(RoadSign("ahead-${it.name}", it.name, "${"%.0f".format(it.km)}km", depthForKm(it.km), RoadSide.RIGHT)) }
+        // 제안이 떠 있으면 앞길 표지판은 제안한 곳만 남긴다. 이미 길가에 있는 곳을 제안하면 그 표지판을 주황으로 바꾼다
+        ahead.stops.forEach { stop ->
+            val hot = stop.name in cardNames
+            if (shown.isEmpty() || hot) add(RoadSign("ahead-${stop.name}", stop.name, "${"%.0f".format(stop.km)}km", depthForKm(stop.km), RoadSide.RIGHT, hot))
+        }
         if (ahead.destination.isNotBlank()) add(RoadSign("dest", ahead.destination, ahead.arrival, 0.97f, RoadSide.CENTER))
-        shown.forEachIndexed { i, card ->
+        shown.filter { card -> ahead.stops.none { it.name == card.name } }.forEachIndexed { i, card ->
             val off = card.distanceKm
             val sub = if (off == null || off < 0.5) "경로 위" else "경로에서 ${"%.1f".format(off)}km"
             add(RoadSign("card-${card.name}", card.name, sub, 0.10f + 0.15f * i, RoadSide.LEFT, hot = true))
@@ -91,7 +96,7 @@ fun CharacterScreen(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
                 .padding(start = 48.dp, top = 116.dp)
-                .width(if (shown.isEmpty()) 720.dp else 420.dp),
+                .width(if (shown.isEmpty()) 720.dp else 620.dp),
         )
         AnimatedVisibility(
             visible = shown.isNotEmpty(),
