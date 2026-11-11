@@ -1,0 +1,44 @@
+name: android-screens
+
+# 에뮬레이터에서 앱을 켜고 화면마다 스크린샷을 찍어 올린다. Actions 실행 페이지에서 app-screens를 받아 본다
+on:
+  push:
+    branches: [develop]
+    paths: ["app/**", ".github/workflows/android-screens.yml"]
+  workflow_dispatch:
+
+jobs:
+  screens:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: KVM 사용 허용
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: APK 빌드
+        working-directory: app
+        run: ./gradlew --no-daemon assembleDebug
+      - name: 에뮬레이터에서 화면 찍기
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_c
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          working-directory: app
+          script: bash scripts/capture_screens.sh screens
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: app-screens
+          path: app/screens/*.png
+          retention-days: 7
