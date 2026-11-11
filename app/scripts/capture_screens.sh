@@ -49,7 +49,12 @@ shot 20_녹음 4
 go --es route home
 sleep 1
 
-for name in album albummap settings music; do
+go --es route music
+shot 30_음악 6
+go --es route home
+sleep 1
+
+for name in album albummap settings; do
   go --es route "$name"
   shot "2x_$name"
   adb shell input keyevent KEYCODE_BACK

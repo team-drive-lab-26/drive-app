@@ -266,7 +266,11 @@ class DoranAgent:
             if not tracks:
                 return _response("unavailable", "추천할 곡 목록을 받지 못했어.")
             track = self._choose_track(tracks, data, now)
-            cards = [{"track_id": track["id"], "name": track["name"]}] if not driving else []
+            # 정차 중에는 고른 곡과 함께 같은 분위기 곡을 더해 세 장까지 보여 준다
+            similar = [t for t in tracks if t is not track and set(_list(t.get("tags"))) & set(_list(track.get("tags")))]
+            others = [t for t in tracks if t is not track and t not in similar]
+            choices = [track, *similar, *others][:3]
+            cards = [{"track_id": t["id"], "name": t["name"]} for t in choices] if not driving else []
             return _response("ok", f"지금은 {track['name']} 어때?", selected_track_id=track["id"], cards=cards)
         if intent == "memory":
             mentions = _list(_mapping(data.get("trip")).get("mentions"))

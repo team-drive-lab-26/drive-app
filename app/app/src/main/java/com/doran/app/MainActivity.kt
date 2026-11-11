@@ -58,6 +58,7 @@ class MainActivity : ComponentActivity() {
             onRouteHandled = viewModel::onRouteHandled,
             onChooseCard = viewModel::chooseCard,
             onDismissCards = viewModel::dismissCards,
+            onRequestMusic = viewModel::requestMusic,
         )
         setContent {
             DoranTheme {

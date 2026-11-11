@@ -405,6 +405,9 @@ def main() -> None:
         catalog = load_catalog(catalog_path)
     else:
         catalog = knowledge.agent_catalog() if knowledge.places else {}
+    # 지역 곡 목록이 아직 비어 있으면 시연용 더미 곡 목록을 쓴다(음원 파일은 앱 assets/music에 같은 ID로 넣는다)
+    if catalog and not catalog.get("tracks"):
+        catalog["tracks"] = KnowledgeBase.load(settings.doran_data_dir / "dummy").agent_catalog()["tracks"]
     upgrade(settings.doran_database_url)
     trips = TripRepository(session_factory(create_db_engine(settings.doran_database_url)), settings.doran_region)
     service = AgentService(**catalog, trips=trips, knowledge=knowledge)

@@ -27,6 +27,7 @@ class DoranActions(
     val onRouteHandled: () -> Unit,
     val onChooseCard: (AgentCard) -> Unit,
     val onDismissCards: () -> Unit,
+    val onRequestMusic: () -> Unit,
 )
 
 val MainUiState.face: DoranFace
@@ -99,7 +100,18 @@ fun DoranNavHost(ui: MainUiState, actions: DoranActions, onboarded: Boolean) {
         composable<Route.Record> {
             RecordScreen(onClose = { nav.popBackStack() })
         }
-        composable<Route.Music> { MusicScreen() }
+        composable<Route.Music> {
+            MusicScreen(
+                face = ui.face,
+                caption = ui.caption,
+                tracks = ui.conversation.cards.filter { it.isTrack },
+                nowPlaying = ui.local.nowPlaying,
+                onEnter = actions.onRequestMusic,
+                onPlay = actions.onChooseCard,
+                onCall = actions.onCall,
+                onBack = { nav.popBackStack() },
+            )
+        }
         composable<Route.Driving> {
             DrivingScreen(
                 face = ui.face,

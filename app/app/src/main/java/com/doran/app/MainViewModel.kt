@@ -10,6 +10,7 @@ import com.doran.app.core.data.NaviState
 import com.doran.app.core.data.PleosNavi
 import com.doran.app.core.data.VehicleStateSource
 import com.doran.app.core.designsystem.DoranMood
+import com.doran.app.core.media.MusicPlayer
 import com.doran.app.core.model.Gear
 import com.doran.app.core.model.VehicleState
 import com.doran.app.core.trip.TripConversationState
@@ -23,12 +24,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /** 화면에서만 쓰는 상태. 디버그 패널, 시연 촬영용 강제 표정, 바깥에서 요청한 화면 이동 */
 data class LocalUiState(
     val showDebug: Boolean = false,
     val forcedMood: DoranMood? = null,
     val requestedRoute: String? = null,
+    val nowPlaying: String? = null,
 )
 
 data class MainUiState(
@@ -71,8 +74,13 @@ class MainViewModel(
     vehicle: VehicleStateSource,
     navi: PleosNavi,
     voice: DoranVoice,
+    music: MusicPlayer,
 ) : ViewModel() {
     private val local = MutableStateFlow(LocalUiState())
+
+    init {
+        viewModelScope.launch { music.nowPlaying.collect { id -> local.update { it.copy(nowPlaying = id) } } }
+    }
 
     val uiState: StateFlow<MainUiState> = combine(
         vehicle.state,
@@ -101,6 +109,7 @@ class MainViewModel(
 
     fun chooseCard(card: AgentCard) = coordinator.chooseCard(card)
     fun dismissCards() = coordinator.dismissCards()
+    fun requestMusic() = coordinator.requestMusic()
     fun toggleDebug() = local.update { it.copy(showDebug = !it.showDebug) }
     fun setDebugVisible(visible: Boolean) = local.update { it.copy(showDebug = visible) }
     fun forceMood(mood: DoranMood?) = local.update { it.copy(forcedMood = mood) }
@@ -111,7 +120,13 @@ class MainViewModel(
         val Factory = viewModelFactory {
             initializer {
                 val container = (this[APPLICATION_KEY] as DoranApplication).container
-                MainViewModel(container.tripCoordinator, container.vehicleStateSource, container.navi, container.voice)
+                MainViewModel(
+                    container.tripCoordinator,
+                    container.vehicleStateSource,
+                    container.navi,
+                    container.voice,
+                    container.musicPlayer,
+                )
             }
         }
     }

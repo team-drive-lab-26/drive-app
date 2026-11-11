@@ -178,11 +178,18 @@ class TripCoordinator(
     fun chooseCard(card: AgentCard) {
         log("카드 선택: ${card.name}")
         if (card.isTrack) {
+            // 곡 카드는 남겨 둬 다른 곡으로 바꿔 틀 수 있게 한다
             ask(utterance = "틀어 줘", selectedTrackId = card.trackId)
         } else {
             ask(utterance = "여기 가자", selectedPlaceId = card.placeId)
+            dismissCards()
         }
-        dismissCards()
+    }
+
+    /** 음악 화면에 들어오면 지금 어울리는 곡을 받아 온다 */
+    fun requestMusic() {
+        if (_state.value.cards.any { it.isTrack }) return
+        ask(utterance = "노래 추천해 줘")
     }
 
     fun dismissCards() = _state.update { it.copy(cards = emptyList()) }
@@ -396,6 +403,8 @@ class TripCoordinator(
         var spoken = reply.speech
         when {
             reply.cards.isNotEmpty() && !vehicle.state.value.isDriving -> _state.update { it.copy(cards = reply.cards) }
+            // 곡을 틀었을 때는 곡 카드를 남긴다
+            reply.requestedTrackId != null -> Unit
             // "아니", 경유지 추가처럼 새 카드 없이 답하면 지난 카드를 닫는다
             isUtterance -> dismissCards()
         }

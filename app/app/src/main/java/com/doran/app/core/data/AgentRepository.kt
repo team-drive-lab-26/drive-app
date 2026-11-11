@@ -29,6 +29,7 @@ data class AgentCard(
     val imageUrl: String = "",
     val distanceKm: Double? = null,
     val artist: String = "",
+    val tags: List<String> = emptyList(),
 ) {
     val isTrack: Boolean get() = trackId != null
 }
@@ -96,7 +97,7 @@ private fun AgentResponse.toReply(): AgentReply {
         speech = speech,
         caption = caption,
         cards = cards.map {
-            AgentCard(it.placeId, it.trackId, it.name, it.kind, it.category, it.summary, it.imageUrl, it.distanceKm, it.artist)
+            AgentCard(it.placeId, it.trackId, it.name, it.kind, it.category, it.summary, it.imageUrl, it.distanceKm, it.artist, it.tags)
         },
         waypoint = waypoint,
         requestedTrackId = effects.firstOrNull { it.type == EffectDto.PLAY_MUSIC }?.trackId,
