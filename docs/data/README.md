@@ -7,7 +7,7 @@
 | 관광지·문화시설·레포츠·쇼핑·음식점·카페 | `places.json` | 한국관광공사 TourAPI 4.0 `KorService2` (`locationBasedList2`, `detailCommon2`, `detailIntro2`) | 2026-11-11 Actions로 182곳 수집. 경로 표본 + 목적지 8km 안(음식점 60, 관광지 30 등). 음식점 메뉴 86곳, 운영 시간 161곳 |
 | 축제·공연·행사 | `places.json` (`category: "event"`) | TourAPI `searchFestival2` | 수집일 기준 끝나지 않은 행사 중 경로 5km 또는 목적지 20km 안 26건. 서버는 켤 때 오늘 진행 중인 행사만 씀 |
 | 고속도로 휴게소 위치·편의시설 | `rest_stops.json` | 공공데이터포털 전국휴게소정보표준데이터(data.go.kr 15025446, 한국도로공사) | 2026-11-11 전국 215곳 중 경로 20km 안 30곳, 경로 위 4곳(하남드림, 횡성·평창·강릉 강릉방향). 광주원주선(민자) 휴게소는 이 데이터에 없음. 대표음식 필드(`rprsntvRstrt`)는 전부 비어 있어 메뉴는 다른 출처 필요 |
-| 곡 목록 | `tracks.json` | 쓸 수 있는 API 없음 | 비어 있음. 팀이 직접 큐레이션 |
+| 곡 목록 | `tracks.json` | 쓸 수 있는 API 없음 | 무료 음원 10곡(Kevin MacLeod, CC BY 4.0). 음원 파일은 앱 `assets/music/<id>.mp3`, 출처는 같은 폴더 `CREDITS.md` |
 | 시연 경로 | `route.json` | OSRM(OpenStreetMap 도로망) 경로를 0.3km 간격으로 줄임 | 서울시청 → 강릉역 → 경포, 중부·광주원주·영동고속도로 약 222km. Pleos 내비 경로와 다를 수 있음 |
 | 내비 경유지 ID(`navi_poi_id`) | 각 장소 항목 | Pleos NaviHelper | 확보 방법 미정. 없으면 좌표로 경유지를 추가한다 |
 

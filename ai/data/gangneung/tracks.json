@@ -1,1 +1,12 @@
-[]
+[
+  {"id": "life-of-riley", "name": "Life of Riley", "artist": "Kevin MacLeod", "source": "catalog", "tags": ["bright", "travel"]},
+  {"id": "carefree", "name": "Carefree", "artist": "Kevin MacLeod", "source": "catalog", "tags": ["refresh", "travel"]},
+  {"id": "local-forecast", "name": "Local Forecast", "artist": "Kevin MacLeod", "source": "catalog", "tags": ["travel"]},
+  {"id": "wallpaper", "name": "Wallpaper", "artist": "Kevin MacLeod", "source": "catalog", "tags": ["travel"]},
+  {"id": "easy-lemon", "name": "Easy Lemon", "artist": "Kevin MacLeod", "source": "catalog", "tags": ["calm"]},
+  {"id": "dreamer", "name": "Dreamer", "artist": "Kevin MacLeod", "source": "catalog", "tags": ["calm"]},
+  {"id": "monkeys-spinning-monkeys", "name": "Monkeys Spinning Monkeys", "artist": "Kevin MacLeod", "source": "catalog", "tags": ["refresh"]},
+  {"id": "hyperfun", "name": "Hyperfun", "artist": "Kevin MacLeod", "source": "catalog", "tags": ["refresh", "bright"]},
+  {"id": "happy-alley", "name": "Happy Alley", "artist": "Kevin MacLeod", "source": "catalog", "tags": ["bright"]},
+  {"id": "bright-wish", "name": "Bright Wish", "artist": "Kevin MacLeod", "source": "catalog", "tags": ["bright", "travel"]}
+]
