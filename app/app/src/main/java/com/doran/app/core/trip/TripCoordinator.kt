@@ -154,6 +154,15 @@ class TripCoordinator(
         }
     }
 
+    /** 주행 화면의 정지 아이콘. 말하던 것과 듣던 것을 멈추고 대기로 돌아간다 */
+    fun stopTalking() {
+        voice.stopSpeaking()
+        cancelListening()
+    }
+
+    /** 디버그용. 화면 촬영 때 자막 한 줄을 바로 띄운다 */
+    fun showDebugCaption(text: String) = setCaption(text)
+
     fun cancelListening() {
         voice.cancelListening()
         _state.update { it.copy(isAwake = false) }

@@ -50,6 +50,7 @@ class MainActivity : ComponentActivity() {
 
         val actions = DoranActions(
             onCall = ::onListenClick,
+            onStop = viewModel::stopTalking,
             onOnboardingDone = {
                 preferences.update { it.copy(onboarded = true) }
                 startHandsFree()
@@ -111,6 +112,7 @@ class MainActivity : ComponentActivity() {
         intent.getStringExtra("say")?.let(viewModel::submitUtterance)
         intent.getStringExtra("event")?.let(viewModel::sendDemoEvent)
         if (intent.getStringExtra("demo") == "tape") viewModel.seedDemoTape()
+        intent.getStringExtra("caption")?.let { viewModel.showDebugCaption(if (it == "-") "" else it) }
     }
 
     private fun startHandsFree() {

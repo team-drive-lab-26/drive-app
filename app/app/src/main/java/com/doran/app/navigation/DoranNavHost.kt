@@ -24,6 +24,7 @@ import com.doran.app.feature.settings.SettingsScreen
 /** 화면에서 부르는 동작. MainActivity가 채운다 */
 class DoranActions(
     val onCall: () -> Unit,
+    val onStop: () -> Unit,
     val onOnboardingDone: () -> Unit,
     val onToggleDebug: () -> Unit,
     val onRouteHandled: () -> Unit,
@@ -120,6 +121,7 @@ fun DoranNavHost(ui: MainUiState, actions: DoranActions, onboarded: Boolean) {
                 caption = ui.caption,
                 routeLine = ui.routeLine,
                 onCall = actions.onCall,
+                onStop = actions.onStop,
                 onLongPress = actions.onToggleDebug,
             )
         }

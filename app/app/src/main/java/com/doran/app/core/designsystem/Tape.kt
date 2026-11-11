@@ -285,13 +285,13 @@ fun TapeStrip(
  * 왼쪽 [leading]만큼은 도란이 앉을 자리로 비운다.
  */
 @Composable
-fun CaptionBand(caption: String, hint: String, modifier: Modifier = Modifier, height: Dp = 176.dp, leading: Dp = 0.dp) {
+fun CaptionBand(caption: String, hint: String, modifier: Modifier = Modifier, height: Dp = 176.dp, leading: Dp = 0.dp, trailing: Dp = 48.dp) {
     Box(modifier.fillMaxWidth().height(height)) {
         Canvas(Modifier.fillMaxSize()) { drawTapeBand(1f, size.height) }
         AnimatedContent(
             targetState = caption,
             transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
-            modifier = Modifier.align(Alignment.CenterStart).padding(start = leading, end = 48.dp),
+            modifier = Modifier.align(Alignment.CenterStart).padding(start = leading, end = trailing),
             label = "caption",
         ) { text ->
             Text(
