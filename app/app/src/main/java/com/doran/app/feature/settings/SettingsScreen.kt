@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
@@ -39,8 +40,10 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.doran.app.BuildConfig
 import com.doran.app.DoranApplication
 import com.doran.app.core.data.AppPreferences
+import com.doran.app.core.designsystem.BackBar
 import com.doran.app.core.designsystem.DoranPalette
 import com.doran.app.core.designsystem.DoranSecondaryButton
+import com.doran.app.core.designsystem.RibbonButton
 import com.doran.app.core.trip.TripCoordinator
 
 class SettingsViewModel(private val preferences: AppPreferences, private val coordinator: TripCoordinator) : ViewModel() {
@@ -81,37 +84,40 @@ class SettingsViewModel(private val preferences: AppPreferences, private val coo
 fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)) {
     val prefs by viewModel.state.collectAsStateWithLifecycle()
     var newName by remember { mutableStateOf("") }
+    Column(Modifier.fillMaxSize().background(DoranPalette.Background)) {
+    BackBar(back = "도란", title = "설정", onBack = onBack)
     Column(
         Modifier
             .fillMaxSize()
-            .background(DoranPalette.Background)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 64.dp, vertical = 24.dp),
+            .padding(start = 64.dp, end = 64.dp, bottom = 40.dp)
+            .widthIn(max = 900.dp),
     ) {
-        Text(
-            "← 돌아가기",
-            style = MaterialTheme.typography.titleLarge,
-            color = DoranPalette.Ink,
-            modifier = Modifier.clickable(onClick = onBack).padding(vertical = 8.dp),
-        )
-        Text("설정", style = MaterialTheme.typography.headlineMedium, color = DoranPalette.Ink)
-        Spacer(Modifier.height(24.dp))
-
         Section("\"도란아\"로 부르기", "끄면 도란을 눌러야만 들어요. 켜 두면 마이크가 계속 켜져 있지만, \"도란아\"로 시작한 말만 서버로 보내요.") {
             Switch(
                 checked = prefs.wakeWord,
                 onCheckedChange = viewModel::setWakeWord,
-                colors = SwitchDefaults.colors(checkedTrackColor = DoranPalette.Body),
+                colors = SwitchDefaults.colors(
+                    checkedTrackColor = DoranPalette.Head,
+                    checkedThumbColor = DoranPalette.Surface,
+                    uncheckedTrackColor = DoranPalette.Surface,
+                    uncheckedBorderColor = DoranPalette.InkSoft,
+                    uncheckedThumbColor = DoranPalette.InkSoft,
+                ),
             )
         }
         HorizontalDivider(color = DoranPalette.Line)
 
         Column(Modifier.padding(vertical = 24.dp)) {
             Text("가족 이름", style = MaterialTheme.typography.titleLarge, color = DoranPalette.Ink)
-            Text("녹음한 뒤 \"누가 남겼어?\"에 나오는 이름이에요. 눌러서 지워요.", style = MaterialTheme.typography.bodyMedium, color = DoranPalette.InkSoft)
+            Text(
+                "녹음한 뒤 \"누가 남겼어?\"에 나오는 이름이에요. 사람마다 테이프에 칠할 색이 정해져 있어요. 눌러서 빼요.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = DoranPalette.InkSoft,
+            )
             Spacer(Modifier.height(16.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                prefs.family.forEach { name -> DoranSecondaryButton(text = "$name  ✕", onClick = { viewModel.removeFamily(name) }) }
+                prefs.family.forEach { name -> RibbonButton(name = name, trailing = "빼기", onClick = { viewModel.removeFamily(name) }) }
             }
             Spacer(Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -134,6 +140,7 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = viewModel(
         Section("서버로 보내는 것", "질문 문장, 주행·정차 상태, 남은 시간, 들른 곳 이름과 시각. 목소리 녹음 파일과 대기 중에 들린 말은 보내지 않아요.") {}
         HorizontalDivider(color = DoranPalette.Line)
         Section("앱 정보", "도란 ${BuildConfig.VERSION_NAME}") {}
+    }
     }
 }
 

@@ -57,13 +57,27 @@ data class MainUiState(
             else -> DoranMood.IDLE
         }
 
+    /** 목적지 이름. 내비 경로가 없으면 시연용 값 */
+    val destination: String
+        get() = if (navi.isRouteActive && navi.destinationName.isNotBlank()) navi.destinationName else conversation.demoDestination
+
+    val etaMinutes: Int?
+        get() = if (navi.isRouteActive && navi.destinationName.isNotBlank()) navi.etaMinutes else conversation.demoEtaMinutes
+
     /** 주행 화면 위쪽에 두는 길 정보 한 줄 */
     val routeLine: String
-        get() = when {
-            !navi.isRouteActive || navi.destinationName.isBlank() -> ""
-            navi.etaMinutes == null -> navi.destinationName
-            else -> "${navi.destinationName}까지 ${formatMinutes(navi.etaMinutes)}"
+        get() {
+            val eta = etaMinutes
+            return when {
+                destination.isBlank() -> ""
+                eta == null -> destination
+                else -> "${destination}까지 ${formatMinutes(eta)}"
+            }
         }
+
+    /** 앞길 끝에 붙이는 남은 시간 */
+    val etaLine: String
+        get() = etaMinutes?.let { "${formatMinutes(it)} 뒤 도착" } ?: ""
 }
 
 private fun formatMinutes(minutes: Int): String =
@@ -104,6 +118,7 @@ class MainViewModel(
     fun submitUtterance(text: String) = coordinator.submitUtterance(text)
     fun sendDemoEvent(event: String) = coordinator.sendDemoEvent(event)
     fun startDemoRoute() = coordinator.startDemoRoute()
+    fun seedDemoTape() = coordinator.seedDemoTape()
     fun overrideGear(gear: Gear) = coordinator.overrideGear(gear)
     fun overrideDoorOpen(open: Boolean) = coordinator.overrideDoorOpen(open)
 

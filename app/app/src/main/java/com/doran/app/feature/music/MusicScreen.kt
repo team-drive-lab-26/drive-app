@@ -1,5 +1,12 @@
 package com.doran.app.feature.music
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,41 +18,38 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.doran.app.core.data.AgentCard
+import com.doran.app.core.designsystem.BackBar
 import com.doran.app.core.designsystem.DoranFace
 import com.doran.app.core.designsystem.DoranPalette
-import com.doran.app.core.designsystem.DoranStage
+import com.doran.app.core.designsystem.DoranText
+import com.doran.app.core.designsystem.Rule
+import com.doran.app.core.designsystem.TappableDoran
 
 private val MOOD_NAMES = mapOf("travel" to "여행", "bright" to "밝은", "refresh" to "상쾌한", "calm" to "잔잔한")
 
-// 분위기마다 곡 앞 동그라미 색을 다르게 해 목록에서 구분한다
-private val MOOD_COLORS = mapOf(
-    "travel" to Color(0xFFFF7A32),
-    "bright" to Color(0xFFF2B33D),
-    "refresh" to Color(0xFF4FA3A5),
-    "calm" to Color(0xFF7D86B5),
-)
-
 /**
  * 도란이 지금 어울리는 곡을 세 곡까지 골라 준다. 들어오면 바로 추천을 받아 온다.
+ * 곡 목록은 테이프 속지(A면 곡 목록)처럼 번호를 크게 적고, 재생 중인 곡은 테이프 색으로 뒤집혀 릴이 돈다.
  * 누르거나 "첫 번째 거 틀어 줘"처럼 말로 고른다.
  */
 @Composable
@@ -60,67 +64,131 @@ fun MusicScreen(
     onBack: () -> Unit,
 ) {
     LaunchedEffect(Unit) { onEnter() }
-    BoxWithConstraints(
+    Column(
         Modifier
             .fillMaxSize()
-            .background(DoranPalette.Background)
-            .padding(horizontal = 40.dp, vertical = 24.dp),
+            .background(DoranPalette.Background),
     ) {
-        val height = maxHeight
-        Column(Modifier.fillMaxSize()) {
-            Text(
-                "← 돌아가기",
-                style = MaterialTheme.typography.titleLarge,
-                color = DoranPalette.Ink,
-                modifier = Modifier.clickable(onClick = onBack).padding(vertical = 8.dp),
-            )
-            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(0.8f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                    DoranStage(face = face, caption = caption, onCall = onCall, characterSize = minOf(height * 0.48f, 300.dp))
+        BackBar(back = "도란", title = "지금 어울리는 곡", onBack = onBack)
+        BoxWithConstraints(Modifier.fillMaxSize().padding(start = 40.dp, end = 40.dp, bottom = 40.dp)) {
+            val doran = minOf(maxHeight * 0.5f, 280.dp)
+            Row(Modifier.fillMaxSize()) {
+                Column(Modifier.weight(0.8f).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
+                    Text(
+                        caption.ifBlank { "어떤 곡이 좋을지 골라 볼게" },
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = DoranPalette.Ink,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(end = 40.dp),
+                    )
+                    Spacer(Modifier.size(24.dp))
+                    TappableDoran(face = face, onCall = onCall, modifier = Modifier.size(doran))
                 }
-                Column(Modifier.weight(1.2f)) {
-                    Text("지금 어울리는 곡", style = MaterialTheme.typography.headlineMedium, color = DoranPalette.Ink)
-                    Spacer(Modifier.height(20.dp))
-                    if (tracks.isEmpty()) {
-                        Text("도란이 고르는 중이야", style = MaterialTheme.typography.bodyLarge, color = DoranPalette.InkSoft)
-                    }
-                    tracks.forEachIndexed { index, track ->
-                        if (index > 0) HorizontalDivider(color = DoranPalette.Line)
-                        TrackRow(track, playing = track.trackId == nowPlaying, onPlay = { onPlay(track) })
-                    }
+                Column(
+                    Modifier
+                        .weight(1.2f)
+                        .fillMaxHeight(),
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    JCard(tracks, nowPlaying, onPlay)
                 }
             }
         }
     }
 }
 
+/** 테이프 속지. 흰 종이에 A면 곡 목록 */
 @Composable
-private fun TrackRow(track: AgentCard, playing: Boolean, onPlay: () -> Unit) {
-    val mood = track.tags.firstOrNull()
+private fun JCard(tracks: List<AgentCard>, nowPlaying: String?, onPlay: (AgentCard) -> Unit) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(DoranPalette.Surface)
+            .padding(vertical = 12.dp),
+    ) {
+        if (tracks.isEmpty()) {
+            Text(
+                "도란이 고르는 중이야",
+                style = MaterialTheme.typography.bodyLarge,
+                color = DoranPalette.InkSoft,
+                modifier = Modifier.padding(horizontal = 28.dp, vertical = 28.dp),
+            )
+        }
+        tracks.forEachIndexed { index, track ->
+            if (index > 0) Rule(Modifier.padding(horizontal = 28.dp), DoranPalette.LineOnPaper)
+            TrackRow("A${index + 1}", track, playing = track.trackId == nowPlaying, onPlay = { onPlay(track) })
+        }
+    }
+}
+
+@Composable
+private fun TrackRow(number: String, track: AgentCard, playing: Boolean, onPlay: () -> Unit) {
+    val ink = if (playing) DoranPalette.TapeText else DoranPalette.Ink
+    val soft = if (playing) DoranPalette.TapeTextSoft else DoranPalette.InkSoft
     Row(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = 96.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .heightIn(min = 112.dp)
+            .padding(horizontal = 12.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (playing) DoranPalette.Tape else Color.Transparent)
             .clickable(onClick = onPlay)
-            .padding(vertical = 16.dp, horizontal = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(20.dp).clip(CircleShape).background(MOOD_COLORS[mood] ?: DoranPalette.Line))
-        Spacer(Modifier.width(20.dp))
+        Text(number, style = DoranText.trackNo, color = if (playing) DoranPalette.Head else ink, modifier = Modifier.width(72.dp))
         Column(Modifier.weight(1f)) {
-            Text(track.name, style = MaterialTheme.typography.titleLarge, color = DoranPalette.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(track.name, style = MaterialTheme.typography.headlineMedium, color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val moods = track.tags.mapNotNull(MOOD_NAMES::get).joinToString(", ")
             Text(
-                listOf(track.artist, if (moods.isBlank()) "" else "$moods 분위기").filter(String::isNotBlank).joinToString(", "),
+                listOf(track.artist, if (moods.isBlank()) "" else "$moods 분위기").filter(String::isNotBlank).joinToString(" · "),
                 style = MaterialTheme.typography.bodyMedium,
-                color = DoranPalette.InkSoft,
+                color = soft,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
-        Text(
-            if (playing) "재생 중" else "틀기",
-            style = MaterialTheme.typography.labelLarge,
-            color = if (playing) DoranPalette.Body else DoranPalette.Ink,
-        )
+        Spacer(Modifier.width(16.dp))
+        if (playing) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Reel()
+                Reel()
+            }
+        } else {
+            Box(
+                Modifier
+                    .heightIn(min = 64.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(DoranPalette.Ink)
+                    .padding(horizontal = 28.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("틀기", style = MaterialTheme.typography.labelLarge, color = DoranPalette.Surface, modifier = Modifier.padding(vertical = 20.dp))
+            }
+        }
+    }
+}
+
+/** 재생 중 표시. 테이프 릴이 천천히 돈다 */
+@Composable
+private fun Reel() {
+    val turn by rememberInfiniteTransition(label = "reel").animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(2400, easing = LinearEasing), RepeatMode.Restart),
+        label = "turn",
+    )
+    Canvas(Modifier.size(44.dp).rotate(turn)) {
+        val r = size.minDimension / 2f
+        drawCircle(DoranPalette.TapeText, r - 2.dp.toPx(), style = Stroke(width = 3.dp.toPx()))
+        drawCircle(DoranPalette.TapeText, r * 0.28f)
+        for (i in 0 until 3) {
+            val a = Math.toRadians(i * 120.0)
+            val inner = Offset(center.x + (r * 0.28f * Math.cos(a)).toFloat(), center.y + (r * 0.28f * Math.sin(a)).toFloat())
+            val outer = Offset(center.x + (r * 0.72f * Math.cos(a)).toFloat(), center.y + (r * 0.72f * Math.sin(a)).toFloat())
+            drawLine(DoranPalette.Head, inner, outer, strokeWidth = 4.dp.toPx())
+        }
     }
 }

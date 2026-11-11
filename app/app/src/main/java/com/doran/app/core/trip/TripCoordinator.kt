@@ -11,6 +11,8 @@ import com.doran.app.core.media.CapsulePlayer
 import com.doran.app.core.media.CapsuleStore
 import com.doran.app.core.media.MusicPlayer
 import com.doran.app.core.model.Gear
+import com.doran.app.core.model.TapeKind
+import com.doran.app.core.model.TapeMark
 import com.doran.app.core.network.NavigationDto
 import com.doran.app.core.network.VehicleDto
 import com.doran.app.core.voice.DoranVoice
@@ -52,6 +54,11 @@ data class TripConversationState(
     val lastPlaceName: String = "",
     /** 디버그 패널에서 보는 최근 기록 */
     val logs: List<TripLog> = emptyList(),
+    /** 이번 여행 테이프. 출발, 들른 곳, 남긴 목소리 순서 */
+    val tape: List<TapeMark> = emptyList(),
+    /** 시연 촬영용 목적지와 남은 분. 내비가 연결되면 내비 값을 쓴다 */
+    val demoDestination: String = "",
+    val demoEtaMinutes: Int? = null,
 )
 
 /**
@@ -92,6 +99,7 @@ class TripCoordinator(
     fun start() {
         if (started) return
         started = true
+        addMark(TapeKind.START, "출발")
         vehicle.start()
         navi.start()
         voice.start()
@@ -231,6 +239,7 @@ class TripCoordinator(
     fun saveCapsule(id: String, speaker: String, durationMs: Long) {
         val place = _state.value.lastPlaceName
         capsules.save(Capsule(id, sessionId, speaker, place, clock(), durationMs))
+        addMark(TapeKind.VOICE, speaker, id = id, seconds = (durationMs / 1000).toInt().coerceAtLeast(1))
         log("캡슐 저장: $speaker ${durationMs / 1000}초")
         cheer()
         say("저장했어. 앨범에서 다시 들을 수 있어.")
@@ -268,6 +277,34 @@ class TripCoordinator(
         }
         log("이벤트(시연): $event")
         ask(event = event, vehicleOverride = v, navigationOverride = n)
+    }
+
+    /**
+     * 디버그용. 화면 촬영을 위해 지나온 여행을 테이프에 채운다. 시각은 지금 기준으로 거꾸로 잡는다.
+     * 실제 기록과 섞이지 않게 기존 테이프를 바꾼다.
+     */
+    fun seedDemoTape() {
+        val now = clock()
+        fun ago(min: Int) = now - min * 60_000L
+        _state.update {
+            it.copy(
+                tape = listOf(
+                    TapeMark("demo-start", TapeKind.START, "출발", ago(118)),
+                    TapeMark("demo-stop-1", TapeKind.STOP, "하남드림 휴게소", ago(96)),
+                    TapeMark("demo-voice-1", TapeKind.VOICE, "아이", ago(92), seconds = 12),
+                    TapeMark("demo-voice-2", TapeKind.VOICE, "엄마", ago(90), seconds = 8),
+                    TapeMark("demo-stop-2", TapeKind.STOP, "횡성휴게소", ago(31)),
+                    TapeMark("demo-voice-3", TapeKind.VOICE, "아빠", ago(28), seconds = 15),
+                ),
+                lastPlaceName = "횡성휴게소",
+                demoDestination = "강릉역",
+                demoEtaMinutes = 52,
+            )
+        }
+    }
+
+    private fun addMark(kind: TapeKind, label: String, id: String = UUID.randomUUID().toString(), seconds: Int = 0) {
+        _state.update { it.copy(tape = it.tape + TapeMark(id, kind, label, clock(), seconds)) }
     }
 
     /** 디버그용. 에뮬레이터 내비에 강릉 목적지를 잡는다 */
@@ -346,6 +383,7 @@ class TripCoordinator(
         val id = waypointIds[stop.placeName] ?: "navi-${stop.placeName.take(100)}"
         log("정차 기록: ${stop.placeName}")
         _state.update { it.copy(lastPlaceName = stop.placeName) }
+        addMark(TapeKind.STOP, stop.placeName)
         // 들른 곳에서 목소리를 남기자고 먼저 묻는다. 답은 호출어 없이 바로 듣는다
         awaitingRecordAnswer = true
         say("${stop.placeName}에 도착했어. 여기서 한마디 남길래?", onDone = ::listen)

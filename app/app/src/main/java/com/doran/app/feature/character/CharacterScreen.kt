@@ -1,44 +1,67 @@
 package com.doran.app.feature.character
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.doran.app.core.data.AgentCard
+import com.doran.app.core.designsystem.CALL_HINT
 import com.doran.app.core.designsystem.DoranFace
 import com.doran.app.core.designsystem.DoranPalette
-import com.doran.app.core.designsystem.DoranStage
 import com.doran.app.core.designsystem.SuggestionCard
+import com.doran.app.core.designsystem.TapeEntry
+import com.doran.app.core.designsystem.TapeStrip
+import com.doran.app.core.designsystem.TappableDoran
+import com.doran.app.core.designsystem.TopBar
+import com.doran.app.core.designsystem.clockText
+import com.doran.app.core.designsystem.doranFeetOffset
 
 /** 정차 화면에서 바로 갈 수 있는 곳 */
 class HomeLinks(val onAlbum: () -> Unit, val onMusic: () -> Unit, val onSettings: () -> Unit)
 
+/** 테이프 끝에 적는 목적지와 남은 시간 */
+class TapeEnd(val destination: String, val eta: String)
+
 /**
- * 정차 중 첫 화면. 평소에는 도란 혼자 있고, 도란이 제안하면 도란이 왼쪽으로 비켜서고 카드가 들어온다.
- * 위쪽에는 길 정보 한 줄과 앨범·음악·설정으로 가는 글자 링크만 둔다.
+ * 정차 중 첫 화면. 이번 여행이 테이프로 펼쳐진다.
+ * 왼쪽은 지나온 곳과 남긴 목소리, 귤색 재생 헤드가 지금, 오른쪽 빈 테이프 끝이 목적지다. 도란은 헤드 위에 앉는다.
+ * 도란이 제안하면 헤드가 왼쪽으로 물러나고, 빈 테이프 위로 카드(최대 2장)가 내려와 끼울 자리를 가리킨다.
  */
 @Composable
 fun CharacterScreen(
     face: DoranFace,
     caption: String,
     routeLine: String,
+    tape: List<TapeEntry>,
+    end: TapeEnd,
     cards: List<AgentCard>,
     links: HomeLinks,
     onCall: () -> Unit,
@@ -49,53 +72,93 @@ fun CharacterScreen(
     Column(
         Modifier
             .fillMaxSize()
-            .background(DoranPalette.Background)
-            .padding(horizontal = 40.dp, vertical = 24.dp),
+            .background(DoranPalette.Background),
     ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                routeLine,
-                style = MaterialTheme.typography.titleLarge,
-                color = DoranPalette.InkSoft,
-                modifier = Modifier.weight(1f),
-            )
-            TopLink("앨범", links.onAlbum)
-            TopLink("음악", links.onMusic)
-            TopLink("설정", links.onSettings)
-        }
+        TopBar(
+            title = routeLine.ifBlank { "이번 여행" },
+            links = listOf("앨범" to links.onAlbum, "음악" to links.onMusic, "설정" to links.onSettings),
+        )
         BoxWithConstraints(Modifier.fillMaxSize()) {
-            val height = maxHeight
             val hasCards = cards.isNotEmpty()
-            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                    DoranStage(
-                        face = face,
-                        caption = caption,
-                        onCall = onCall,
-                        onLongPress = onLongPress,
-                        characterSize = if (hasCards) minOf(height * 0.5f, 300.dp) else minOf(height * 0.62f, 420.dp),
-                    )
-                }
-                AnimatedVisibility(
-                    visible = hasCards,
-                    enter = fadeIn() + slideInHorizontally { it / 3 },
-                    exit = fadeOut(),
-                    modifier = Modifier.weight(1.25f),
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
-                        cards.take(2).forEach { card ->
-                            SuggestionCard(card = card, onAccept = { onChoose(card) }, onDismiss = onDismissCards)
+            val band = 156.dp
+            val bandTop = maxHeight - band - 44.dp - 36.dp
+            val playhead by animateFloatAsState(if (hasCards) 0.27f else 0.46f, tween(520), label = "playhead")
+            val doran by animateDpAsState(if (hasCards) minOf(bandTop * 0.55f, 250.dp) else minOf(bandTop * 0.78f, 330.dp), tween(520), label = "doran")
+            val headX = maxWidth * playhead
+
+            // 도란의 말. 화면의 제목처럼 맨 위에 둔다
+            Text(
+                caption.ifBlank { CALL_HINT },
+                style = MaterialTheme.typography.displayMedium,
+                color = if (caption.isBlank()) DoranPalette.InkSoft else DoranPalette.Ink,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .padding(start = 40.dp, top = 8.dp)
+                    .width(if (hasCards) maxWidth * 0.42f else maxWidth * 0.6f),
+            )
+
+            TapeStrip(
+                entries = tape,
+                playhead = playhead,
+                bandHeight = band,
+                nowLabel = "지금 ${clockText(System.currentTimeMillis())}",
+                endTitle = end.destination,
+                endSub = end.eta.ifBlank { if (end.destination.isBlank()) "목적지를 정하면 여기까지 이어져" else "" },
+                modifier = Modifier.offset(y = bandTop),
+            )
+
+            Box(Modifier.offset(x = headX - doran / 2, y = bandTop - doranFeetOffset(doran))) {
+                TappableDoran(face = face, onCall = onCall, onLongPress = onLongPress, modifier = Modifier.size(doran))
+            }
+
+            val cardsLeft = headX + 170.dp
+            AnimatedVisibility(
+                visible = hasCards,
+                enter = fadeIn(tween(240, delayMillis = 200)) + slideInVertically(tween(420, delayMillis = 200)) { -it / 6 },
+                exit = fadeOut(tween(150)),
+                modifier = Modifier.offset(x = cardsLeft),
+            ) {
+                val shown = cards.take(2)
+                val cardHeight = 196.dp
+                val stack = cardHeight * shown.size + 16.dp * (shown.size - 1).coerceAtLeast(0)
+                Box(Modifier.width(maxWidth - cardsLeft - 40.dp).height(bandTop)) {
+                    // 카드에서 빈 테이프로 내려가는 점선과 끼울 자리
+                    Canvas(Modifier.fillMaxSize()) {
+                        val x = 36.dp.toPx()
+                        val from = (bandTop - 28.dp).toPx()
+                        drawLine(
+                            DoranPalette.Head,
+                            Offset(x, from),
+                            Offset(x, size.height + 18.dp.toPx()),
+                            strokeWidth = 3.dp.toPx(),
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(8.dp.toPx(), 8.dp.toPx())),
+                        )
+                        drawRoundRect(
+                            DoranPalette.Head,
+                            topLeft = Offset(x - 12.dp.toPx(), size.height + 18.dp.toPx()),
+                            size = Size(150.dp.toPx(), band.toPx() - 36.dp.toPx()),
+                            cornerRadius = CornerRadius(10.dp.toPx()),
+                            style = Stroke(width = 3.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 8.dp.toPx()))),
+                        )
+                    }
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .offset(y = bandTop - 28.dp - stack),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        shown.forEach { card ->
+                            SuggestionCard(
+                                card = card,
+                                onAccept = { onChoose(card) },
+                                onDismiss = onDismissCards,
+                                modifier = Modifier.height(cardHeight),
+                            )
                         }
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun TopLink(text: String, onClick: () -> Unit) {
-    TextButton(onClick = onClick, modifier = Modifier.padding(start = 8.dp)) {
-        Text(text, style = MaterialTheme.typography.titleLarge, color = DoranPalette.Ink)
     }
 }

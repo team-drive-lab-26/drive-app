@@ -37,7 +37,7 @@ go --es mood speaking
 shot 13_주행_말하는중 1
 go --es mood happy
 shot 14_주행_기쁨 1
-go --es mood none --es gear P --es onboarded yes --es route home
+go --es mood none --es gear P --es onboarded yes --es route home --es demo tape
 shot 15_정차_홈
 go --es say "근처 맛집 추천해 줘"
 shot 16_정차_제안카드 6
@@ -46,6 +46,7 @@ shot 17_정차_휴게소카드 6
 
 go --es route record
 shot 20_녹음 4
+shot 21_녹음_고른사람 13
 go --es route home
 sleep 1
 

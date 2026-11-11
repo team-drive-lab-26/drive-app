@@ -110,6 +110,7 @@ class MainActivity : ComponentActivity() {
         intent.getStringExtra("debug")?.let { viewModel.setDebugVisible(it == "on") }
         intent.getStringExtra("say")?.let(viewModel::submitUtterance)
         intent.getStringExtra("event")?.let(viewModel::sendDemoEvent)
+        if (intent.getStringExtra("demo") == "tape") viewModel.seedDemoTape()
     }
 
     private fun startHandsFree() {

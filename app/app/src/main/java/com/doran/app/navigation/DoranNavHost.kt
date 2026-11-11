@@ -13,6 +13,8 @@ import com.doran.app.feature.album.AlbumScreen
 import com.doran.app.feature.albummap.AlbumMapScreen
 import com.doran.app.feature.character.CharacterScreen
 import com.doran.app.feature.character.HomeLinks
+import com.doran.app.feature.character.TapeEnd
+import com.doran.app.core.designsystem.toEntry
 import com.doran.app.feature.driving.DrivingScreen
 import com.doran.app.feature.music.MusicScreen
 import com.doran.app.feature.onboarding.OnboardingScreen
@@ -82,6 +84,8 @@ fun DoranNavHost(ui: MainUiState, actions: DoranActions, onboarded: Boolean) {
                 face = ui.face,
                 caption = ui.caption,
                 routeLine = ui.routeLine,
+                tape = ui.conversation.tape.map { it.toEntry() },
+                end = TapeEnd(destination = ui.destination, eta = ui.etaLine),
                 cards = ui.conversation.cards,
                 links = HomeLinks(
                     onAlbum = { nav.navigate(Route.Album) },
