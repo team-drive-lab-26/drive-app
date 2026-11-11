@@ -75,9 +75,9 @@ data class MainUiState(
             }
         }
 
-    /** 앞길 끝에 붙이는 남은 시간 */
-    val etaLine: String
-        get() = etaMinutes?.let { "${formatMinutes(it)} 뒤 도착" } ?: ""
+    /** 도착 예정 시각. 위 막대 아래 줄과 지평선 표지판에 쓴다 */
+    val arrivalClock: String
+        get() = etaMinutes?.let { java.time.LocalTime.now(java.time.ZoneId.of("Asia/Seoul")).plusMinutes(it.toLong()).format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) } ?: ""
 }
 
 private fun formatMinutes(minutes: Int): String =

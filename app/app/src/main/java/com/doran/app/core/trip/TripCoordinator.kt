@@ -10,6 +10,7 @@ import com.doran.app.core.media.Capsule
 import com.doran.app.core.media.CapsulePlayer
 import com.doran.app.core.media.CapsuleStore
 import com.doran.app.core.media.MusicPlayer
+import com.doran.app.core.model.AheadStop
 import com.doran.app.core.model.Gear
 import com.doran.app.core.model.TapeKind
 import com.doran.app.core.model.TapeMark
@@ -59,6 +60,8 @@ data class TripConversationState(
     /** 시연 촬영용 목적지와 남은 분. 내비가 연결되면 내비 값을 쓴다 */
     val demoDestination: String = "",
     val demoEtaMinutes: Int? = null,
+    /** 앞길 표지판. 지금은 시연 촬영 때만 채운다. 내비가 경로 위 휴게소 거리를 주면 여기로 받는다 */
+    val ahead: List<AheadStop> = emptyList(),
 )
 
 /**
@@ -307,6 +310,7 @@ class TripCoordinator(
                 lastPlaceName = "광장시장",
                 demoDestination = "강릉역",
                 demoEtaMinutes = 158,
+                ahead = listOf(AheadStop("하남드림 휴게소", 12.0), AheadStop("횡성휴게소", 68.0)),
             )
         }
     }

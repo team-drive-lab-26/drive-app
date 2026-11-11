@@ -1,24 +1,20 @@
 package com.doran.app.core.designsystem
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.border
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,19 +32,19 @@ private val CATEGORY_NAMES = mapOf(
     "rest_stop" to "휴게소",
 )
 
-/** 카드 맨 위 한 줄. 무엇인지와 경로에서 얼마나 벗어나는지 */
+/** 무엇인지와 경로에서 얼마나 벗어나는지 */
 fun AgentCard.headline(): String {
     if (isTrack) return artist.ifBlank { "추천 곡" }
     val kindName = CATEGORY_NAMES[category] ?: "장소"
     val distance = distanceKm ?: return kindName
-    return if (distance < 0.5) "경로 위 $kindName" else "경로에서 ${"%.1f".format(distance)}km 떨어진 $kindName"
+    return if (distance < 0.5) "$kindName · 경로 위" else "$kindName · 경로에서 ${"%.1f".format(distance)}km"
 }
 
-private val CardShape = RoundedCornerShape(16.dp)
+private val PanelShape = RoundedCornerShape(22.dp)
 
 /**
- * 정차 중에만 보이는 제안 카드 한 장. 테이프 라벨처럼 흰 종이에 사진, 이름, 한 줄 설명을 적는다.
- * 말("응", "아니")로도 답할 수 있어 버튼은 오른쪽에 두 개만 세로로 둔다.
+ * 정차 중 제안 패널. 길가에 솟은 주황 표지판과 짝을 이룬다.
+ * [compact]가 아니면 위에 사진을 크게 싣는다. 말("응", "아니")로도 답할 수 있어 버튼은 두 개만 둔다.
  */
 @Composable
 fun SuggestionCard(
@@ -56,55 +52,38 @@ fun SuggestionCard(
     onAccept: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
-    Row(
+    Column(
         modifier
             .fillMaxWidth()
-            .clip(CardShape)
+            .clip(PanelShape)
             .background(DoranPalette.Surface)
-            .border(2.dp, DoranPalette.Ink, CardShape),
+            .border(1.dp, DoranPalette.Line, PanelShape),
     ) {
-        if (card.imageUrl.isNotBlank()) {
+        if (!compact && card.imageUrl.isNotBlank()) {
             AsyncImage(
                 model = card.imageUrl,
                 contentDescription = card.name,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxHeight().aspectRatio(1f).background(DoranPalette.LineOnPaper),
+                modifier = Modifier.fillMaxWidth().height(170.dp).background(DoranPalette.SurfaceHigh),
             )
         }
-        Column(
-            Modifier
-                .weight(1f)
-                .fillMaxHeight()
-                .padding(horizontal = 24.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.Center,
-        ) {
+        Column(Modifier.padding(horizontal = 24.dp, vertical = 20.dp)) {
+            Text(card.name, style = MaterialTheme.typography.headlineMedium, color = DoranPalette.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(4.dp))
             Text(
-                card.name,
-                style = MaterialTheme.typography.headlineMedium,
-                color = DoranPalette.Ink,
-                maxLines = 1,
+                listOf(card.headline(), card.summary).filter(String::isNotBlank).joinToString(" · "),
+                style = MaterialTheme.typography.bodyMedium,
+                color = DoranPalette.InkSoft,
+                maxLines = if (compact) 1 else 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(6.dp))
-            Text(card.headline(), style = MaterialTheme.typography.bodyMedium, color = DoranPalette.Ink, maxLines = 1)
-            if (card.summary.isNotBlank()) {
-                Text(
-                    card.summary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = DoranPalette.InkSoft,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            Spacer(Modifier.height(18.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                DoranPrimaryButton(text = if (card.isTrack) "틀기" else "들르기", onClick = onAccept, modifier = Modifier.weight(1.3f))
+                DoranSecondaryButton(text = "괜찮아", onClick = onDismiss, modifier = Modifier.weight(1f))
             }
-        }
-        Column(
-            Modifier.fillMaxHeight().padding(end = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
-        ) {
-            DoranPrimaryButton(text = if (card.isTrack) "틀기" else "들르기", onClick = onAccept, modifier = Modifier.width(148.dp))
-            DoranSecondaryButton(text = "괜찮아", onClick = onDismiss, modifier = Modifier.width(148.dp))
         }
     }
 }
-

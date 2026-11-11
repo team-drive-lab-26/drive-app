@@ -2,11 +2,12 @@ package com.doran.app.core.designsystem
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -36,7 +38,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
-/** 누르면 듣고, 길게 누르면 디버그 패널을 여는 도란. 주행 중에는 [still]로 혼자 두리번거리지 않게 한다 */
+/** 누르면 듣고, 길게 누르면 디버그 패널을 여는 도란. 주행 중에는 [still]로 혼자 움직이지 않게 한다 */
 @Composable
 fun TappableDoran(face: DoranFace, onCall: () -> Unit, modifier: Modifier = Modifier, onLongPress: () -> Unit = {}, still: Boolean = false) {
     DoranCharacter(
@@ -52,42 +54,22 @@ fun TappableDoran(face: DoranFace, onCall: () -> Unit, modifier: Modifier = Modi
     )
 }
 
-/** 테이프 면 표시. 가는 길은 A면 */
+/** 정차 화면 위 막대. 왼쪽은 남은 시간(가장 크게)과 도착 시각, 오른쪽은 다른 화면으로 가는 글자 탭 */
 @Composable
-fun SideMark(side: String, modifier: Modifier = Modifier) {
-    Box(
-        modifier
-            .size(48.dp)
-            .border(BorderStroke(2.5.dp, DoranPalette.Ink), DoranButtonShape),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(side, style = DoranText.trackNo, color = DoranPalette.Ink)
-    }
-}
-
-/** 정차 화면 위 막대. 왼쪽은 테이프 면과 길 정보, 오른쪽은 다른 화면으로 가는 글자 탭 */
-@Composable
-fun TopBar(title: String, links: List<Pair<String, () -> Unit>>, modifier: Modifier = Modifier) {
+fun TopBar(title: String, sub: String, links: List<Pair<String, () -> Unit>>, modifier: Modifier = Modifier) {
     Row(
         modifier
             .fillMaxWidth()
-            .height(88.dp)
-            .padding(start = 40.dp, end = 24.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(start = 48.dp, end = 24.dp, top = 24.dp),
+        verticalAlignment = Alignment.Top,
     ) {
-        SideMark("A")
-        Spacer(Modifier.width(16.dp))
-        Text(
-            title,
-            style = MaterialTheme.typography.titleLarge,
-            color = DoranPalette.Ink,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.headlineMedium, color = DoranPalette.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (sub.isNotBlank()) Text(sub, style = DoranText.number, color = DoranPalette.InkSoft)
+        }
         links.forEach { (text, onClick) ->
             TextButton(onClick = onClick, modifier = Modifier.heightIn(min = 64.dp), contentPadding = PaddingValues(horizontal = 20.dp)) {
-                Text(text, style = MaterialTheme.typography.titleLarge, color = DoranPalette.Ink)
+                Text(text, style = MaterialTheme.typography.titleLarge, color = DoranPalette.InkSoft)
             }
         }
     }
@@ -108,11 +90,11 @@ private fun BackChevron(color: Color) {
 
 /** 하위 화면 위 막대. 뒤로 가기와 화면 이름 */
 @Composable
-fun BackBar(back: String, title: String, onBack: () -> Unit, modifier: Modifier = Modifier, trailing: @Composable () -> Unit = {}) {
+fun BackBar(back: String, title: String, onBack: () -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier
             .fillMaxWidth()
-            .height(88.dp)
+            .height(96.dp)
             .padding(start = 20.dp, end = 40.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -124,36 +106,41 @@ fun BackBar(back: String, title: String, onBack: () -> Unit, modifier: Modifier 
                 .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            BackChevron(DoranPalette.Ink)
+            BackChevron(DoranPalette.InkSoft)
             Spacer(Modifier.width(4.dp))
             Text(back, style = MaterialTheme.typography.titleLarge, color = DoranPalette.InkSoft)
         }
         Spacer(Modifier.width(20.dp))
         Text(title, style = MaterialTheme.typography.headlineMedium, color = DoranPalette.Ink, modifier = Modifier.weight(1f))
-        trailing()
     }
 }
 
-/** 가족 이름 버튼. 그 사람 리본 색 칸이 앞에 붙는다 */
+/** 그 사람 색 점 */
+@Composable
+fun PersonDot(name: String, modifier: Modifier = Modifier) {
+    Box(modifier.size(18.dp).background(FamilyRibbon.colorFor(name), CircleShape))
+}
+
+/** 가족 이름 버튼. 그 사람 색 점이 앞에 붙는다 */
 @Composable
 fun RibbonButton(name: String, onClick: () -> Unit, modifier: Modifier = Modifier, trailing: String = "") {
     OutlinedButton(
         onClick = onClick,
         shape = DoranButtonShape,
         modifier = modifier.heightIn(min = 72.dp),
-        contentPadding = PaddingValues(start = 20.dp, end = 28.dp),
-        border = BorderStroke(2.dp, DoranPalette.Ink.copy(alpha = 0.85f)),
+        contentPadding = PaddingValues(start = 22.dp, end = 28.dp),
+        border = BorderStroke(2.dp, DoranPalette.LineStrong),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = DoranPalette.Ink),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            TapeSwatch(FamilyRibbon.colorFor(name), Modifier.size(28.dp))
+            PersonDot(name, Modifier.size(22.dp))
             Text(name, style = MaterialTheme.typography.titleLarge)
             if (trailing.isNotBlank()) Text(trailing, style = MaterialTheme.typography.bodyMedium, color = DoranPalette.InkSoft)
         }
     }
 }
 
-/** 띠 위아래 여백 없이 한 줄 구분선 */
+/** 한 줄 구분선 */
 @Composable
 fun Rule(modifier: Modifier = Modifier, color: Color = DoranPalette.Line) {
     Canvas(modifier.fillMaxWidth().height(1.dp)) {
