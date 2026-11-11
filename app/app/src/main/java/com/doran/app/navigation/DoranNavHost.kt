@@ -17,7 +17,6 @@ import com.doran.app.feature.driving.DrivingScreen
 import com.doran.app.feature.music.MusicScreen
 import com.doran.app.feature.onboarding.OnboardingScreen
 import com.doran.app.feature.record.RecordScreen
-import com.doran.app.feature.record.SpeakerSelectScreen
 import com.doran.app.feature.settings.SettingsScreen
 
 /** 화면에서 부르는 동작. MainActivity가 채운다 */
@@ -44,6 +43,11 @@ fun DoranNavHost(ui: MainUiState, actions: DoranActions, onboarded: Boolean) {
         } else {
             nav.popBackStack<Route.Driving>(inclusive = true)
         }
+    }
+
+    // "한마디 남길래?"에 답하면 녹음 화면을 연다. 주행 중에는 열지 않는다
+    LaunchedEffect(ui.conversation.recordRequestAt) {
+        if (ui.conversation.recordRequestAt != 0L && !ui.isDriving) nav.navigate(Route.Record) { launchSingleTop = true }
     }
 
     // 시연 촬영과 디버그용. 바깥에서 화면 이름으로 이동을 요청한다
@@ -93,10 +97,7 @@ fun DoranNavHost(ui: MainUiState, actions: DoranActions, onboarded: Boolean) {
         }
         composable<Route.Settings> { SettingsScreen() }
         composable<Route.Record> {
-            RecordScreen(onRecorded = { nav.navigate(Route.SpeakerSelect) })
-        }
-        composable<Route.SpeakerSelect> {
-            SpeakerSelectScreen(onDone = { nav.popBackStack<Route.Album>(inclusive = false) })
+            RecordScreen(onClose = { nav.popBackStack() })
         }
         composable<Route.Music> { MusicScreen() }
         composable<Route.Driving> {

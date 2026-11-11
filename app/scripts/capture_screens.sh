@@ -44,7 +44,12 @@ shot 16_정차_제안카드 6
 go --es say "휴게소 어디야"
 shot 17_정차_휴게소카드 6
 
-for name in album albummap settings record speaker music; do
+go --es route record
+shot 20_녹음 4
+go --es route home
+sleep 1
+
+for name in album albummap settings music; do
   go --es route "$name"
   shot "2x_$name"
   adb shell input keyevent KEYCODE_BACK

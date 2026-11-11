@@ -22,9 +22,6 @@ sealed interface Route {
     data object Record : Route
 
     @Serializable
-    data object SpeakerSelect : Route
-
-    @Serializable
     data object Music : Route
 
     @Serializable
@@ -39,7 +36,6 @@ sealed interface Route {
             "character", "home" -> Character
             "settings" -> Settings
             "record" -> Record
-            "speaker" -> SpeakerSelect
             "music" -> Music
             else -> null
         }

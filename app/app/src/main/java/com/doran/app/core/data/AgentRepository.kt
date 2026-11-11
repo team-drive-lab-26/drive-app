@@ -71,6 +71,7 @@ class AgentRepository(baseUrl: String) {
     }
 
     suspend fun recordTrip(sessionId: String, type: String, id: String, name: String? = null, category: String? = null) {
+        // 정차 기록의 이름·좌표는 서버가 후보 목록에서 채운다. 목록에 없는 곳은 이름만 남는다
         requireApi().recordTrip(TripRecordRequest(sessionId, type, id, name, category))
     }
 

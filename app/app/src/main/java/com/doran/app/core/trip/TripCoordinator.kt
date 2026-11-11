@@ -6,6 +6,9 @@ import com.doran.app.core.data.AgentRepository
 import com.doran.app.core.data.NaviCommandResult
 import com.doran.app.core.data.PleosNavi
 import com.doran.app.core.data.VehicleStateSource
+import com.doran.app.core.media.Capsule
+import com.doran.app.core.media.CapsulePlayer
+import com.doran.app.core.media.CapsuleStore
 import com.doran.app.core.media.MusicPlayer
 import com.doran.app.core.model.Gear
 import com.doran.app.core.network.NavigationDto
@@ -43,6 +46,10 @@ data class TripConversationState(
     val cheerAt: Long = 0L,
     /** 정차 중 보여 줄 제안 카드. 주행으로 바뀌면 닫는다 */
     val cards: List<AgentCard> = emptyList(),
+    /** 녹음 화면을 열어 달라는 요청 시각. 화면이 이 값이 바뀌면 녹음 화면으로 간다 */
+    val recordRequestAt: Long = 0L,
+    /** 마지막으로 도착한 곳. 녹음에 붙인다 */
+    val lastPlaceName: String = "",
     /** 디버그 패널에서 보는 최근 기록 */
     val logs: List<TripLog> = emptyList(),
 )
@@ -58,9 +65,15 @@ class TripCoordinator(
     private val navi: PleosNavi,
     private val voice: DoranVoice,
     private val music: MusicPlayer,
+    private val capsules: CapsuleStore,
+    private val capsulePlayer: CapsulePlayer,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
-    private val sessionId = UUID.randomUUID().toString()
+    /** 앱을 켤 때마다 새 여행. 앨범에서 "이번 여행"을 찾을 때 쓴다 */
+    val sessionId = UUID.randomUUID().toString()
+
+    // "한마디 남길래?"에 대한 답을 기다리는 중
+    private var awaitingRecordAnswer = false
     private val detector = TripEventDetector()
 
     // 내비는 장소 ID를 모르므로, 우리가 추가한 경유지 이름으로 서버 장소 ID를 찾는다
@@ -176,7 +189,47 @@ class TripCoordinator(
 
     fun submitUtterance(text: String) {
         log("발화: $text")
+        if (awaitingRecordAnswer) {
+            awaitingRecordAnswer = false
+            val answer = text.trim()
+            when {
+                RECORD_NO.any { answer.contains(it) } -> {
+                    say("알겠어.")
+                    return
+                }
+                RECORD_YES.any { answer.contains(it) } -> {
+                    requestRecord()
+                    return
+                }
+            }
+        }
         ask(utterance = text)
+    }
+
+    /** 정차 화면이나 "한마디 남길래?"에서 녹음 화면을 연다 */
+    fun requestRecord() {
+        stopStandby()
+        setCaption("")
+        _state.update { it.copy(recordRequestAt = clock()) }
+    }
+
+    /** 녹음 화면에서 남긴 사람을 고른 뒤 부른다. 파일은 이미 기기에 있다 */
+    fun saveCapsule(id: String, speaker: String, durationMs: Long) {
+        val place = _state.value.lastPlaceName
+        capsules.save(Capsule(id, sessionId, speaker, place, clock(), durationMs))
+        log("캡슐 저장: $speaker ${durationMs / 1000}초")
+        cheer()
+        say("저장했어. 앨범에서 다시 들을 수 있어.")
+        if (!agent.isConfigured) return
+        scope.launch {
+            try {
+                agent.recordTrip(sessionId, type = "capsule", id = id, name = speaker)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                log("캡슐 기록 실패")
+            }
+        }
     }
 
     fun overrideGear(gear: Gear) = vehicle.overrideGear(gear)
@@ -278,10 +331,14 @@ class TripCoordinator(
     private fun recordStop(stop: TripTrigger.Stopped) {
         val id = waypointIds[stop.placeName] ?: "navi-${stop.placeName.take(100)}"
         log("정차 기록: ${stop.placeName}")
+        _state.update { it.copy(lastPlaceName = stop.placeName) }
+        // 들른 곳에서 목소리를 남기자고 먼저 묻는다. 답은 호출어 없이 바로 듣는다
+        awaitingRecordAnswer = true
+        say("${stop.placeName}에 도착했어. 여기서 한마디 남길래?", onDone = ::listen)
         if (!agent.isConfigured) return
         scope.launch {
             try {
-                agent.recordTrip(sessionId, type = "stop", id = id)
+                agent.recordTrip(sessionId, type = "stop", id = id, name = stop.placeName)
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
@@ -361,11 +418,18 @@ class TripCoordinator(
                 spoken = "이 곡은 아직 들을 수 없어."
             }
         }
-        if (reply.requestedCapsuleId != null) spoken = "녹음 재생 연결이 필요해."
+        val capsuleId = reply.requestedCapsuleId
+        if (capsuleId != null && !capsules.has(capsuleId)) spoken = "그 녹음은 이 기기에 없어."
+        val playCapsule = capsuleId?.takeIf(capsules::has)
         val caption = reply.caption.ifBlank { spoken }.ifBlank { if (isUtterance) "다시 말해 줘" else "" }
         // 도란이 먼저 물어본 제안은 호출어 없이 바로 답을 듣는다("응", "아니")
         val awaitAnswer = reply.status == "needs_confirmation" && pendingTrackId == null
-        say(spoken, caption, onDone = if (awaitAnswer) ::listen else ::scheduleStandbyNow)
+        when {
+            awaitAnswer -> say(spoken, caption, onDone = ::listen)
+            // 안내가 끝난 뒤 목소리를 틀고, 다 들으면 대기로 돌아간다
+            playCapsule != null -> say(spoken, caption) { capsulePlayer.play(playCapsule, onDone = ::scheduleStandbyNow) }
+            else -> say(spoken, caption)
+        }
     }
 
     private fun say(text: String, caption: String = text, onDone: () -> Unit = ::scheduleStandbyNow) {
@@ -428,6 +492,8 @@ class TripCoordinator(
         // 인식기가 바로 오류를 내도 쉬지 않고 다시 켜지 않게 잠깐 쉰다
         const val STANDBY_RESTART_MS = 400L
         const val STANDBY_WAIT_ENGINE_MS = 2_000L
+        val RECORD_YES = listOf("응", "네", "그래", "좋아", "남길", "할래", "녹음")
+        val RECORD_NO = listOf("아니", "괜찮아", "됐어", "나중에", "싫어", "안 남", "안 할")
         const val MAX_LOGS = 30
         val HH_MM: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     }

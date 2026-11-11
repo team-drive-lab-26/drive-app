@@ -2,6 +2,9 @@ package com.doran.app.core.data
 
 import android.content.Context
 import com.doran.app.BuildConfig
+import com.doran.app.core.media.CapsulePlayer
+import com.doran.app.core.media.CapsuleRecorder
+import com.doran.app.core.media.CapsuleStore
 import com.doran.app.core.media.MusicPlayer
 import com.doran.app.core.trip.TripCoordinator
 import com.doran.app.core.voice.DoranVoice
@@ -25,6 +28,9 @@ class AppContainer(context: Context) {
     val navi = PleosNavi(appContext)
     val voice = DoranVoice(appContext)
     val musicPlayer = MusicPlayer(appContext)
+    val capsules = CapsuleStore(appContext)
+    val capsulePlayer = CapsulePlayer(capsules)
+    val recorder = CapsuleRecorder(appContext)
 
     val tripCoordinator = TripCoordinator(
         scope = applicationScope,
@@ -33,5 +39,7 @@ class AppContainer(context: Context) {
         navi = navi,
         voice = voice,
         music = musicPlayer,
+        capsules = capsules,
+        capsulePlayer = capsulePlayer,
     )
 }
