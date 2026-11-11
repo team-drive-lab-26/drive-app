@@ -61,6 +61,21 @@ class ServiceTests(unittest.TestCase):
         expired = self.service.respond({**base, "now": "2026-11-07T12:03:00+09:00", "utterance": "여기 가자", "selected_place_id": "p1"})
         self.assertEqual(expired["effects"], [])
 
+    def test_parked_cards_carry_place_details(self):
+        self.places[0] |= {"address": "강릉시 해안로 1", "opening_hours": "10:00~21:00", "route_distance_km": 1.2}
+        base = {"session_id": "trip-card-detail", "now": NOW, "kind": "user_utterance", "vehicle": {"gear": "P"}}
+        card = self.service.respond({**base, "utterance": "근처 맛집 추천해 줘"})["cards"][0]
+        self.assertEqual(card["kind"], "place")
+        self.assertEqual(card["category"], "food")
+        self.assertEqual(card["summary"], "운영 10:00~21:00")
+        self.assertEqual(card["distance_km"], 1.2)
+
+    def test_parked_event_proposal_shows_place_as_card(self):
+        base = {"session_id": "trip-reboard", "now": NOW, "kind": "vehicle_event", "event": "reboarded",
+                "vehicle": {"gear": "P", "doors_closed": True, "last_stop_minutes": 20}}
+        reply = self.service.respond(base)
+        self.assertEqual([c["place_id"] for c in reply["cards"]], ["p1"])
+
     def test_parked_user_can_choose_second_offered_card(self):
         self.places.append({"id": "p2", "name": "해변 식당", "source": "tour_api", "category": "food", "along_route": True, "latitude": 37.5, "longitude": 127.1, "navi_poi_id": "navi-2"})
         base = {"session_id": "trip-second-card", "now": NOW, "kind": "user_utterance", "vehicle": {"gear": "P"}}

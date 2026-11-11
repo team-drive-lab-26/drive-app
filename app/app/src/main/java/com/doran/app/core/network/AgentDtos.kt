@@ -57,6 +57,15 @@ data class CardDto(
     @SerialName("place_id") val placeId: String? = null,
     @SerialName("track_id") val trackId: String? = null,
     val name: String = "",
+    /** place, rest_stop. 곡 카드는 비어 있다 */
+    val kind: String = "",
+    val category: String = "",
+    val address: String = "",
+    val summary: String = "",
+    @SerialName("image_url") val imageUrl: String = "",
+    @SerialName("distance_km") val distanceKm: Double? = null,
+    val artist: String = "",
+    val tags: List<String> = emptyList(),
 )
 
 @Serializable
@@ -91,6 +100,8 @@ data class TripRecordRequest(
     val id: String,
     val name: String? = null,
     val category: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
 )
 
 @Serializable

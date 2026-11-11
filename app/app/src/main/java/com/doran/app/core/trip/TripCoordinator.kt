@@ -1,5 +1,6 @@
 package com.doran.app.core.trip
 
+import com.doran.app.core.data.AgentCard
 import com.doran.app.core.data.AgentReply
 import com.doran.app.core.data.AgentRepository
 import com.doran.app.core.data.NaviCommandResult
@@ -40,6 +41,8 @@ data class TripConversationState(
     val isAwake: Boolean = false,
     /** 경유지 추가, 녹음 저장처럼 일이 끝난 시각. 바뀔 때마다 도란이 한 번 웃는다 */
     val cheerAt: Long = 0L,
+    /** 정차 중 보여 줄 제안 카드. 주행으로 바뀌면 닫는다 */
+    val cards: List<AgentCard> = emptyList(),
     /** 디버그 패널에서 보는 최근 기록 */
     val logs: List<TripLog> = emptyList(),
 )
@@ -82,6 +85,7 @@ class TripCoordinator(
 
         scope.launch {
             combine(vehicle.state, navi.state) { v, n -> v to n }.collect { (v, n) ->
+                if (v.isDriving && _state.value.cards.isNotEmpty()) dismissCards()
                 handle(detector.update(v, n, clock()))
             }
         }
@@ -156,6 +160,19 @@ class TripCoordinator(
     }
 
     fun onMicPermissionDenied() = setCaption("마이크 권한이 필요해")
+
+    /** 정차 화면에서 카드를 눌렀다. 장소는 경유지로, 곡은 재생으로 */
+    fun chooseCard(card: AgentCard) {
+        log("카드 선택: ${card.name}")
+        if (card.isTrack) {
+            ask(utterance = "틀어 줘", selectedTrackId = card.trackId)
+        } else {
+            ask(utterance = "여기 가자", selectedPlaceId = card.placeId)
+        }
+        dismissCards()
+    }
+
+    fun dismissCards() = _state.update { it.copy(cards = emptyList()) }
 
     fun submitUtterance(text: String) {
         log("발화: $text")
@@ -278,6 +295,8 @@ class TripCoordinator(
         event: String? = null,
         vehicleOverride: VehicleDto? = null,
         navigationOverride: NavigationDto? = null,
+        selectedPlaceId: String? = null,
+        selectedTrackId: String? = null,
     ) {
         val isUtterance = utterance != null
         if (!agent.isConfigured) {
@@ -293,6 +312,8 @@ class TripCoordinator(
                     utterance = utterance,
                     event = event,
                     navigation = navigationOverride ?: navigationDto(),
+                    selectedPlaceId = selectedPlaceId,
+                    selectedTrackId = selectedTrackId,
                 )
                 log("응답(${reply.status}): ${reply.caption.ifBlank { reply.speech }.take(40)}")
                 when {
@@ -316,6 +337,11 @@ class TripCoordinator(
 
     private fun deliver(reply: AgentReply, isUtterance: Boolean) {
         var spoken = reply.speech
+        when {
+            reply.cards.isNotEmpty() && !vehicle.state.value.isDriving -> _state.update { it.copy(cards = reply.cards) }
+            // "아니", 경유지 추가처럼 새 카드 없이 답하면 지난 카드를 닫는다
+            isUtterance -> dismissCards()
+        }
         reply.waypoint?.let { waypoint ->
             waypointIds[waypoint.name] = waypoint.id
             navi.addWaypoint(waypoint) { result ->

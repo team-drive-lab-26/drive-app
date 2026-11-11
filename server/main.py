@@ -185,7 +185,13 @@ class AgentService:
                 elif command_type == "PLAY_CAPSULE":
                     if any(c.get("id") == command["capsule_id"] for c in session.trip["capsules"]):
                         effects.append({"type": "PLAY_CAPSULE", "capsule_id": command["capsule_id"]})
-            return {**result, "effects": effects}
+            cards = [card for card in map(self._card, result["cards"]) if card]
+            parked = _mapping(request.get("vehicle")).get("gear") not in {"D", "R"}
+            # 차량 이벤트 제안(휴게소, 재탑승)은 카드 없이 오므로, 정차 중이면 제안한 장소를 카드로 보여 준다
+            if parked and not cards and result["selected_place_id"] and result["status"] in {"ok", "needs_confirmation"}:
+                card = self._card({"place_id": result["selected_place_id"]})
+                cards = [card] if card else []
+            return {**result, "cards": cards, "effects": effects}
 
     def record(self, request: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(request, dict):
@@ -212,6 +218,14 @@ class AgentService:
                 session.trip["mentions"].append(entry)
             else:
                 entry = {"id": item_id}
+                # 앱이 이름·좌표를 모르는 정차 기록은 후보 목록에서 채워 앨범 지도에 찍을 수 있게 한다
+                place = self._place(item_id) if kind == "stop" else None
+                if place:
+                    entry |= {"name": place["name"], "category": place.get("category", "rest_stop")}
+                    if not any(v is not None for v in position.values()) and self._coordinates(place):
+                        position = {"latitude": place["latitude"], "longitude": place["longitude"]}
+                elif isinstance(request.get("name"), str):
+                    entry["name"] = request["name"].strip()[:80]
                 session.trip["stops" if kind == "stop" else "capsules"].append(entry)
             if self.trips:
                 self.trips.add_event(
@@ -244,6 +258,33 @@ class AgentService:
     def _place(self, place_id: str) -> dict[str, Any] | None:
         return next((p for p in self.places + self.rest_stops if p.get("id") == place_id), None)
 
+    def _card(self, card: Any) -> dict[str, Any] | None:
+        """정차 화면 카드에 보여 줄 정보를 붙인다. 후보 목록에 없는 ID는 버린다."""
+        if not isinstance(card, dict):
+            return None
+        place_id, track_id = card.get("place_id"), card.get("track_id")
+        if isinstance(place_id, str):
+            place = self._place(place_id)
+            if not place:
+                return None
+            is_rest = place.get("source") == "expressway_api"
+            return {
+                "place_id": place["id"],
+                "name": place["name"],
+                "kind": "rest_stop" if is_rest else "place",
+                "category": "rest_stop" if is_rest else place.get("category", ""),
+                "address": place.get("address", ""),
+                "summary": _summary(place),
+                "image_url": place.get("image_url", ""),
+                "distance_km": place.get("route_distance_km"),
+            }
+        if isinstance(track_id, str):
+            track = next((t for t in self.tracks if t.get("id") == track_id), None)
+            if not track:
+                return None
+            return {"track_id": track["id"], "name": track["name"], "artist": track.get("artist", ""), "tags": track.get("tags", [])}
+        return None
+
     @staticmethod
     def _coordinates(place: dict[str, Any]) -> bool:
         lat, lon = place.get("latitude"), place.get("longitude")
@@ -256,6 +297,22 @@ class AgentService:
         result["navi_poi_sub_id"] = place.get("navi_poi_sub_id") or None
         result["address"] = place.get("address", "")
         return result
+
+
+def _mapping(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _summary(place: dict[str, Any]) -> str:
+    """카드 한 줄 설명. 휴게소는 시설, 장소는 운영 시간이나 소개 첫 문장."""
+    if place.get("source") == "expressway_api":
+        menu = [m for m in place.get("menu", []) if isinstance(m, str)][:2]
+        facilities = [f for f in place.get("facilities", []) if isinstance(f, str)][:3]
+        return ", ".join(menu + facilities)
+    if place.get("opening_hours"):
+        return f"운영 {place['opening_hours']}"[:60]
+    overview = str(place.get("overview", "")).replace("#", " ").split(".")[0].strip()
+    return overview[:60]
 
 
 def load_catalog(path: str) -> dict[str, list[dict[str, Any]]]:

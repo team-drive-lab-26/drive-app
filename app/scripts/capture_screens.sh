@@ -8,6 +8,9 @@ mkdir -p "$OUT"
 
 shot() {
   sleep "${2:-2}"
+  # 느린 CI 에뮬레이터에서 뜨는 "응답 없음" 창을 닫는다
+  adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS > /dev/null 2>&1
+  sleep 1
   adb exec-out screencap -p > "$OUT/$1.png"
   echo "찍음: $1"
 }
@@ -34,10 +37,14 @@ go --es mood speaking
 shot 13_주행_말하는중 1
 go --es mood happy
 shot 14_주행_기쁨 1
-go --es mood none --es gear P
-shot 15_정차
+go --es mood none --es gear P --es onboarded yes --es route home
+shot 15_정차_홈
+go --es say "근처 맛집 추천해 줘"
+shot 16_정차_제안카드 6
+go --es say "휴게소 어디야"
+shot 17_정차_휴게소카드 6
 
-for name in album albummap home settings record speaker music; do
+for name in album albummap settings record speaker music; do
   go --es route "$name"
   shot "2x_$name"
   adb shell input keyevent KEYCODE_BACK

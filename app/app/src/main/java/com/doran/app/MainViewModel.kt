@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.AP
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.doran.app.core.data.AgentCard
 import com.doran.app.core.data.NaviState
 import com.doran.app.core.data.PleosNavi
 import com.doran.app.core.data.VehicleStateSource
@@ -98,6 +99,8 @@ class MainViewModel(
     fun overrideGear(gear: Gear) = coordinator.overrideGear(gear)
     fun overrideDoorOpen(open: Boolean) = coordinator.overrideDoorOpen(open)
 
+    fun chooseCard(card: AgentCard) = coordinator.chooseCard(card)
+    fun dismissCards() = coordinator.dismissCards()
     fun toggleDebug() = local.update { it.copy(showDebug = !it.showDebug) }
     fun setDebugVisible(visible: Boolean) = local.update { it.copy(showDebug = visible) }
     fun forceMood(mood: DoranMood?) = local.update { it.copy(forcedMood = mood) }

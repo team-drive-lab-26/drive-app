@@ -68,3 +68,15 @@ def test_record_keeps_coordinates_for_album(db_url):
     events = trips.list_events("trip-2")
     assert [(e["type"], e["id"], e["latitude"], e["longitude"]) for e in events] == [("stop", "s1", 37.46, 128.13)]
     engine.dispose()
+
+
+def test_stop_record_takes_name_and_coordinates_from_catalog(db_url):
+    engine = create_db_engine(db_url)
+    place = {"id": "p1", "name": "바닷가 식당", "source": "tour_api", "category": "food", "latitude": 37.41, "longitude": 127.09}
+    service = AgentService(places=[place], rest_stops=[], tracks=[], trips=TripRepository(session_factory(engine), "gangneung"))
+    service.record({"session_id": "trip-stop", "type": "stop", "id": "p1"})
+    service.record({"session_id": "trip-stop", "type": "stop", "id": "navi-강릉역", "name": "강릉역"})
+    events = service.history("trip-stop")["events"]
+    assert (events[0]["name"], events[0]["latitude"], events[0]["longitude"]) == ("바닷가 식당", 37.41, 127.09)
+    assert (events[1]["name"], events[1]["latitude"]) == ("강릉역", None)
+    engine.dispose()

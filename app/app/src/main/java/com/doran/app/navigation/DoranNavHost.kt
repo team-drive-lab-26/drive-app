@@ -7,10 +7,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.doran.app.MainUiState
+import com.doran.app.core.data.AgentCard
 import com.doran.app.core.designsystem.DoranFace
 import com.doran.app.feature.album.AlbumScreen
 import com.doran.app.feature.albummap.AlbumMapScreen
 import com.doran.app.feature.character.CharacterScreen
+import com.doran.app.feature.character.HomeLinks
 import com.doran.app.feature.driving.DrivingScreen
 import com.doran.app.feature.music.MusicScreen
 import com.doran.app.feature.onboarding.OnboardingScreen
@@ -24,6 +26,8 @@ class DoranActions(
     val onOnboardingDone: () -> Unit,
     val onToggleDebug: () -> Unit,
     val onRouteHandled: () -> Unit,
+    val onChooseCard: (AgentCard) -> Unit,
+    val onDismissCards: () -> Unit,
 )
 
 val MainUiState.face: DoranFace
@@ -70,7 +74,23 @@ fun DoranNavHost(ui: MainUiState, actions: DoranActions, onboarded: Boolean) {
             )
         }
         composable<Route.AlbumMap> { AlbumMapScreen() }
-        composable<Route.Character> { CharacterScreen() }
+        composable<Route.Character> {
+            CharacterScreen(
+                face = ui.face,
+                caption = ui.caption,
+                routeLine = ui.routeLine,
+                cards = ui.conversation.cards,
+                links = HomeLinks(
+                    onAlbum = { nav.navigate(Route.Album) },
+                    onMusic = { nav.navigate(Route.Music) },
+                    onSettings = { nav.navigate(Route.Settings) },
+                ),
+                onCall = actions.onCall,
+                onLongPress = actions.onToggleDebug,
+                onChoose = actions.onChooseCard,
+                onDismissCards = actions.onDismissCards,
+            )
+        }
         composable<Route.Settings> { SettingsScreen() }
         composable<Route.Record> {
             RecordScreen(onRecorded = { nav.navigate(Route.SpeakerSelect) })

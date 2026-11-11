@@ -56,6 +56,8 @@ class MainActivity : ComponentActivity() {
             },
             onToggleDebug = { if (BuildConfig.DEBUG) viewModel.toggleDebug() },
             onRouteHandled = viewModel::onRouteHandled,
+            onChooseCard = viewModel::chooseCard,
+            onDismissCards = viewModel::dismissCards,
         )
         setContent {
             DoranTheme {

@@ -19,7 +19,19 @@ data class AgentReply(
     val requestedCapsuleId: String?,
 )
 
-data class AgentCard(val placeId: String?, val trackId: String?, val name: String)
+data class AgentCard(
+    val placeId: String?,
+    val trackId: String?,
+    val name: String,
+    val kind: String = "",
+    val category: String = "",
+    val summary: String = "",
+    val imageUrl: String = "",
+    val distanceKm: Double? = null,
+    val artist: String = "",
+) {
+    val isTrack: Boolean get() = trackId != null
+}
 
 data class WaypointRequest(
     val id: String,
@@ -42,6 +54,8 @@ class AgentRepository(baseUrl: String) {
         utterance: String? = null,
         event: String? = null,
         navigation: NavigationDto = NavigationDto(),
+        selectedPlaceId: String? = null,
+        selectedTrackId: String? = null,
     ): AgentReply {
         val request = AgentRequest(
             sessionId = sessionId,
@@ -50,6 +64,8 @@ class AgentRepository(baseUrl: String) {
             navigation = navigation,
             utterance = utterance,
             event = event,
+            selectedPlaceId = selectedPlaceId,
+            selectedTrackId = selectedTrackId,
         )
         return requireApi().respond(request).toReply()
     }
@@ -78,7 +94,9 @@ private fun AgentResponse.toReply(): AgentReply {
         status = status,
         speech = speech,
         caption = caption,
-        cards = cards.map { AgentCard(it.placeId, it.trackId, it.name) },
+        cards = cards.map {
+            AgentCard(it.placeId, it.trackId, it.name, it.kind, it.category, it.summary, it.imageUrl, it.distanceKm, it.artist)
+        },
         waypoint = waypoint,
         requestedTrackId = effects.firstOrNull { it.type == EffectDto.PLAY_MUSIC }?.trackId,
         requestedCapsuleId = effects.firstOrNull { it.type == EffectDto.PLAY_CAPSULE }?.capsuleId,
