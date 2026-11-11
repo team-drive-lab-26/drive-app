@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.util.Locale
+import kotlin.math.abs
 import ai.pleos.playground.stt.SpeechToText as PleosStt
 import ai.pleos.playground.stt.constant.ErrorType as SttError
 import ai.pleos.playground.stt.constant.Mode as SttMode
@@ -39,6 +40,8 @@ data class VoiceState(
     val listenPhase: ListenPhase = ListenPhase.IDLE,
     /** 듣는 중 실시간으로 바뀌는 인식 문장 */
     val partial: String = "",
+    /** 0~1. 듣는 중에는 마이크 소리, 말하는 중에는 도란 목소리 크기. 캐릭터 움직임에 쓴다 */
+    val level: Float = 0f,
 )
 
 sealed interface ListenResult {
@@ -73,7 +76,7 @@ class DoranVoice(context: Context) {
         override fun onDone() = onMain { finishSpeaking(notify = true) }
         override fun onStop() = Unit
         override fun onError(errorType: TtsError) = onMain { finishSpeaking(notify = true) }
-        override fun onUpdatedRms(rms: Double) = Unit
+        override fun onUpdatedRms(rms: Double) = onMain { setLevel(rms.toFloat()) }
     }
 
     private val sttResults = object : SttResultListener {
@@ -88,7 +91,7 @@ class DoranVoice(context: Context) {
         }
 
         override fun onUpdatedEpdData(on: Long, off: Long) = Unit
-        override fun onUpdatedRms(rms: Double) = Unit
+        override fun onUpdatedRms(rms: Double) = onMain { setLevel(rms.toFloat()) }
 
         // 끝 신호가 최종 결과보다 먼저 올 때가 있어, 잠시 기다린 뒤에도 결과가 없으면 들은 만큼으로 끝낸다
         override fun onEndedRecognition() = onMain { main.postDelayed(endWithoutFinal, FINAL_RESULT_GRACE_MS) }
@@ -135,7 +138,7 @@ class DoranVoice(context: Context) {
     private fun finishSpeaking(notify: Boolean) {
         val callback = onSpoken
         onSpoken = null
-        _state.update { it.copy(isSpeaking = false) }
+        _state.update { it.copy(isSpeaking = false, level = 0f) }
         if (notify) callback?.invoke()
     }
 
@@ -252,7 +255,7 @@ class DoranVoice(context: Context) {
         val callback = onHeard ?: return
         onHeard = null
         clearListenTimeouts()
-        _state.update { it.copy(listenPhase = ListenPhase.IDLE, partial = "") }
+        _state.update { it.copy(listenPhase = ListenPhase.IDLE, partial = "", level = 0f) }
         callback(result)
     }
 
@@ -298,7 +301,8 @@ class DoranVoice(context: Context) {
             recognizer.setRecognitionListener(object : RecognitionListener {
                 override fun onReadyForSpeech(params: Bundle?) = Unit
                 override fun onBeginningOfSpeech() = Unit
-                override fun onRmsChanged(rmsdB: Float) = Unit
+                // 안드로이드 인식기는 대략 -2~10dB를 준다
+                override fun onRmsChanged(rmsdB: Float) = setLevel((rmsdB + 2f) / 12f)
                 override fun onBufferReceived(buffer: ByteArray?) = Unit
                 override fun onEndOfSpeech() = Unit
                 override fun onError(error: Int) = deliver(ListenResult.NothingHeard)
@@ -324,6 +328,13 @@ class DoranVoice(context: Context) {
         return runCatching { recognizer.startListening(intent) }.isSuccess
     }
 
+    // SDK마다 크기 단위가 달라, 1보다 큰 값은 dB 비슷한 값으로 보고 0~1로 줄인다. 작은 변화는 무시해 화면 갱신을 줄인다
+    private fun setLevel(raw: Float) {
+        val value = (if (raw > 1f) raw / 12f else raw).coerceIn(0f, 1f)
+        if (abs(value - _state.value.level) < LEVEL_STEP) return
+        _state.update { it.copy(level = value) }
+    }
+
     private fun onMain(block: () -> Unit) {
         if (Looper.myLooper() == Looper.getMainLooper()) block() else main.post(block)
     }
@@ -346,5 +357,6 @@ class DoranVoice(context: Context) {
         const val FINAL_RESULT_GRACE_MS = 500L
         const val CHIME_VOLUME = 80
         const val CHIME_MS = 150
+        const val LEVEL_STEP = 0.05f
     }
 }

@@ -38,6 +38,8 @@ data class TripConversationState(
     val isStandby: Boolean = false,
     /** 호출됐거나 제안에 대한 답을 듣는 중 */
     val isAwake: Boolean = false,
+    /** 경유지 추가, 녹음 저장처럼 일이 끝난 시각. 바뀔 때마다 도란이 한 번 웃는다 */
+    val cheerAt: Long = 0L,
     /** 디버그 패널에서 보는 최근 기록 */
     val logs: List<TripLog> = emptyList(),
 )
@@ -319,7 +321,7 @@ class TripCoordinator(
             navi.addWaypoint(waypoint) { result ->
                 log("경유지 요청: ${waypoint.name} → ${result::class.simpleName}")
                 when (result) {
-                    NaviCommandResult.Submitted -> Unit
+                    NaviCommandResult.Submitted -> cheer()
                     NaviCommandResult.NotConnected -> say("내비 연결을 확인해 줘.")
                     NaviCommandResult.Failed -> say("경유지를 추가하지 못했어.")
                 }
@@ -388,6 +390,8 @@ class TripCoordinator(
     private fun clockAfter(minutes: Int): String = LocalTime.now().plusMinutes(minutes.toLong()).format(HH_MM)
 
     private fun setCaption(text: String) = _state.update { it.copy(caption = text) }
+
+    private fun cheer() = _state.update { it.copy(cheerAt = clock()) }
 
     private fun log(text: String) {
         _state.update { it.copy(logs = (listOf(TripLog(clock(), text)) + it.logs).take(MAX_LOGS)) }

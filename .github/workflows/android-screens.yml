@@ -3,7 +3,7 @@ name: android-screens
 # 에뮬레이터에서 앱을 켜고 화면마다 스크린샷을 찍어 올린다. Actions 실행 페이지에서 app-screens를 받아 본다
 on:
   push:
-    branches: [develop]
+    branches: [develop, "feature/ui"]
     paths: ["app/**", ".github/workflows/android-screens.yml"]
   workflow_dispatch:
 

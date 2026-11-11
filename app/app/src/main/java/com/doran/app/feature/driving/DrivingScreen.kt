@@ -1,42 +1,52 @@
 package com.doran.app.feature.driving
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.IconButton
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.doran.app.core.designsystem.DoranFace
+import com.doran.app.core.designsystem.DoranPalette
+import com.doran.app.core.designsystem.DoranStage
 
-/** 주행 중에는 음성 버튼(듣는 중에는 정지) 하나와 자막 한 줄만 둔다. 버튼은 "도란아" 호출어가 안 될 때의 예비 수단이다 */
+/**
+ * 주행 중 화면. 버튼 없이 도란과 자막 한 줄, 위쪽에 길 정보 한 줄만 둔다.
+ * 말은 "도란아"로 걸고, 도란을 눌러도 듣는다.
+ */
 @Composable
-fun DrivingScreen(caption: String, isListening: Boolean, onListen: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+fun DrivingScreen(
+    face: DoranFace,
+    caption: String,
+    routeLine: String,
+    onCall: () -> Unit,
+    onLongPress: () -> Unit,
+) {
+    BoxWithConstraints(
+        Modifier
+            .fillMaxSize()
+            .background(DoranPalette.Background),
     ) {
-        IconButton(
-            onClick = onListen,
-            modifier = Modifier.size(48.dp).semantics {
-                contentDescription = if (isListening) "듣기 멈추기" else "도란 음성 입력"
-            },
-        ) {
-            Text(if (isListening) "■" else "●", fontSize = 24.sp, color = MaterialTheme.colorScheme.primary)
+        if (routeLine.isNotBlank()) {
+            Text(
+                text = routeLine,
+                style = MaterialTheme.typography.titleLarge,
+                color = DoranPalette.InkSoft,
+                modifier = Modifier.align(Alignment.TopStart).padding(start = 40.dp, top = 32.dp),
+            )
         }
-        Text(
-            caption.ifBlank { "\"도란아\" 하고 불러 보세요" },
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            fontSize = 24.sp,
+        DoranStage(
+            face = face,
+            caption = caption,
+            onCall = onCall,
+            onLongPress = onLongPress,
+            characterSize = minOf(maxHeight * 0.58f, maxWidth * 0.4f),
+            modifier = Modifier.align(Alignment.Center).padding(bottom = 24.dp),
         )
     }
 }
