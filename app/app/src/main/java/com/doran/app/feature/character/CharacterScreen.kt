@@ -64,6 +64,7 @@ fun CharacterScreen(
             TopLink("설정", links.onSettings)
         }
         BoxWithConstraints(Modifier.fillMaxSize()) {
+            val height = maxHeight
             val hasCards = cards.isNotEmpty()
             Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
@@ -72,7 +73,7 @@ fun CharacterScreen(
                         caption = caption,
                         onCall = onCall,
                         onLongPress = onLongPress,
-                        characterSize = if (hasCards) minOf(maxHeight * 0.5f, 300.dp) else minOf(maxHeight * 0.62f, 420.dp),
+                        characterSize = if (hasCards) minOf(height * 0.5f, 300.dp) else minOf(height * 0.62f, 420.dp),
                     )
                 }
                 AnimatedVisibility(
