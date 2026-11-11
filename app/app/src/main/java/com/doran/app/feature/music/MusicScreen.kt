@@ -10,12 +10,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -34,24 +32,29 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.doran.app.core.data.AgentCard
 import com.doran.app.core.designsystem.BackBar
-import com.doran.app.core.designsystem.DoranButtonShape
 import com.doran.app.core.designsystem.DoranFace
 import com.doran.app.core.designsystem.DoranPalette
-import com.doran.app.core.designsystem.DoranText
+import com.doran.app.core.designsystem.DoranPrimaryButton
+import com.doran.app.core.designsystem.RoadScene
+import com.doran.app.core.designsystem.Rule
 import com.doran.app.core.designsystem.TappableDoran
 import kotlin.math.abs
 import kotlin.math.sin
 
 private val MOOD_NAMES = mapOf("travel" to "여행", "bright" to "밝은", "refresh" to "상쾌한", "calm" to "잔잔한")
 
+private fun AgentCard.moodLine(): String {
+    val moods = tags.mapNotNull(MOOD_NAMES::get).joinToString(", ")
+    return if (moods.isBlank()) "" else "$moods 분위기"
+}
+
 /**
- * 도란이 지금 어울리는 곡을 세 곡까지 골라 준다. 들어오면 바로 추천을 받아 온다.
- * 첫 곡이 도란이 가장 권하는 곡이라 그 버튼만 채운다. 재생 중인 곡은 막대가 움직인다.
+ * 음악. 같은 앞길 위에서 도란이 지금 어울리는 곡을 권한다. 들어오면 바로 추천을 받아 온다.
+ * 왼쪽 위에 도란의 말과 가장 권하는 곡 하나(주 버튼), 오른쪽 위 패널에 나머지 곡. 재생 중인 곡은 막대가 움직인다.
  * 누르거나 "첫 번째 거 틀어 줘"처럼 말로 고른다.
  */
 @Composable
@@ -66,30 +69,50 @@ fun MusicScreen(
     onBack: () -> Unit,
 ) {
     LaunchedEffect(Unit) { onEnter() }
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(DoranPalette.Background),
-    ) {
-        BackBar(back = "도란", title = "지금 어울리는 곡", onBack = onBack)
-        Row(Modifier.fillMaxSize().padding(start = 48.dp, end = 40.dp, bottom = 40.dp)) {
-            Column(Modifier.weight(0.8f).fillMaxHeight().padding(end = 40.dp), verticalArrangement = Arrangement.Center) {
-                TappableDoran(face = face, onCall = onCall, modifier = Modifier.size(200.dp))
-                Spacer(Modifier.size(20.dp))
+    val first = tracks.firstOrNull()
+    Box(Modifier.fillMaxSize().background(DoranPalette.Background)) {
+        RoadScene(horizon = 0.40f, orbSize = 160.dp) {
+            TappableDoran(face = face, onCall = onCall, modifier = Modifier.fillMaxSize())
+        }
+        Column(Modifier.width(620.dp)) {
+            BackBar(back = "도란", title = "음악", onBack = onBack)
+            Column(Modifier.padding(start = 48.dp)) {
                 Text(
-                    caption.ifBlank { "어떤 곡이 좋을지 골라 볼게" },
-                    style = MaterialTheme.typography.headlineMedium,
+                    caption.ifBlank { if (first == null) "어떤 곡이 좋을지 골라 볼게" else "지금은 ${first.name} 어때?" },
+                    style = MaterialTheme.typography.headlineLarge,
                     color = DoranPalette.Ink,
-                    maxLines = 3,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-            }
-            Column(Modifier.weight(1.2f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically)) {
-                if (tracks.isEmpty()) {
-                    Text("도란이 고르는 중이야", style = MaterialTheme.typography.bodyLarge, color = DoranPalette.InkSoft)
+                if (first != null) {
+                    Spacer(Modifier.size(20.dp))
+                    if (first.trackId == nowPlaying) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Bars()
+                            Spacer(Modifier.width(14.dp))
+                            Text("${first.name} 재생 중", style = MaterialTheme.typography.titleLarge, color = DoranPalette.Accent)
+                        }
+                    } else {
+                        DoranPrimaryButton(text = "${first.name} 틀기", onClick = { onPlay(first) })
+                    }
                 }
-                tracks.forEachIndexed { index, track ->
-                    TrackRow(index + 1, track, playing = track.trackId == nowPlaying, first = index == 0, onPlay = { onPlay(track) })
+            }
+        }
+        if (tracks.size > 1) {
+            val shape = RoundedCornerShape(22.dp)
+            Column(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 112.dp, end = 40.dp)
+                    .width(380.dp)
+                    .clip(shape)
+                    .background(DoranPalette.Surface)
+                    .border(1.dp, DoranPalette.Line, shape),
+            ) {
+                Text("다른 곡", style = MaterialTheme.typography.titleMedium, color = DoranPalette.InkSoft, modifier = Modifier.padding(start = 24.dp, top = 18.dp, bottom = 6.dp))
+                tracks.drop(1).forEachIndexed { index, track ->
+                    if (index > 0) Rule(Modifier.padding(horizontal = 24.dp))
+                    TrackRow(track, playing = track.trackId == nowPlaying, onPlay = { onPlay(track) })
                 }
             }
         }
@@ -97,50 +120,21 @@ fun MusicScreen(
 }
 
 @Composable
-private fun TrackRow(number: Int, track: AgentCard, playing: Boolean, first: Boolean, onPlay: () -> Unit) {
-    val shape = RoundedCornerShape(20.dp)
+private fun TrackRow(track: AgentCard, playing: Boolean, onPlay: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = 112.dp)
-            .clip(shape)
-            .background(if (playing) DoranPalette.SurfaceHigh else DoranPalette.Surface)
-            .border(1.dp, if (playing) DoranPalette.Accent else DoranPalette.Line, shape)
+            .heightIn(min = 88.dp)
             .clickable(onClick = onPlay)
-            .padding(horizontal = 24.dp, vertical = 18.dp),
+            .padding(horizontal = 24.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.width(56.dp)) {
-            if (playing) Bars() else Text("$number", style = DoranText.number.copy(fontSize = MaterialTheme.typography.headlineMedium.fontSize), color = DoranPalette.InkMute)
-        }
         Column(Modifier.weight(1f)) {
-            Text(track.name, style = MaterialTheme.typography.headlineMedium, color = DoranPalette.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            val moods = track.tags.mapNotNull(MOOD_NAMES::get).joinToString(", ")
-            Text(
-                listOf(if ("더미" in track.artist) "시연용 곡" else track.artist, if (moods.isBlank()) "" else "$moods 분위기")
-                    .filter(String::isNotBlank).joinToString(" · "),
-                style = MaterialTheme.typography.bodyMedium,
-                color = DoranPalette.InkSoft,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Text(track.name, style = MaterialTheme.typography.titleLarge, color = DoranPalette.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            val mood = track.moodLine()
+            if (mood.isNotBlank()) Text(mood, style = MaterialTheme.typography.bodyMedium, color = DoranPalette.InkSoft, maxLines = 1)
         }
-        Spacer(Modifier.width(16.dp))
-        if (!playing) {
-            Box(
-                Modifier
-                    .heightIn(min = 64.dp)
-                    .clip(DoranButtonShape)
-                    .background(if (first) DoranPalette.Accent else Color.Transparent)
-                    .border(2.dp, if (first) DoranPalette.Accent else DoranPalette.LineStrong, DoranButtonShape)
-                    .padding(horizontal = 30.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("틀기", style = MaterialTheme.typography.labelLarge, color = if (first) DoranPalette.OnAccent else DoranPalette.Ink, modifier = Modifier.padding(vertical = 19.dp))
-            }
-        } else {
-            Text("재생 중", style = MaterialTheme.typography.labelLarge, color = DoranPalette.Accent)
-        }
+        if (playing) Bars() else Text("틀기", style = MaterialTheme.typography.labelLarge, color = DoranPalette.Accent)
     }
 }
 

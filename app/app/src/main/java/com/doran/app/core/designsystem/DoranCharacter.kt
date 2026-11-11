@@ -75,8 +75,14 @@ private fun DrawScope.drawOrb(mood: DoranMood, t: Float, lean: Float, level: Flo
         DoranMood.SPEAKING -> maxOf(level, 0.25f + 0.45f * abs(sin(t * 8.7f)) * abs(sin(t * 2.9f)))
         else -> 0f
     }
-    val breath = if (still && mood == DoranMood.IDLE) 1f else 1f + 0.025f * sin(t * 1.6f)
-    val pulse = if (mood == DoranMood.HAPPY) 1f + 0.09f * abs(sin(t * 6.5f)) else 1f
+    val breath = if (still) 1f else 1f + 0.025f * sin(t * 1.6f)
+    val pulse = when {
+        still -> 1f
+        mood == DoranMood.HAPPY -> 1f + 0.09f * abs(sin(t * 6.5f))
+        // 말하는 중에는 목소리 크기만큼 몸 전체가 고르게 커졌다 작아진다
+        mood == DoranMood.SPEAKING -> 1f + 0.06f * speak
+        else -> 1f
+    }
     val r = base * breath * pulse
     // 운전석(왼쪽)으로 쏠린다
     val c = Offset(size.width / 2f - lean * base * 0.18f, size.height / 2f)
@@ -88,8 +94,24 @@ private fun DrawScope.drawOrb(mood: DoranMood, t: Float, lean: Float, level: Flo
         center = c,
     )
 
+    // 주행 중에는 움직이지 않고 둘레 링 하나로만 상태를 보인다. 듣는 중 주황 실선, 생각 중 점선, 말하는 중 굵은 실선
+    if (still) {
+        val ring = r * 1.18f
+        when (mood) {
+            DoranMood.LISTENING -> drawCircle(DoranPalette.Accent, ring, c, style = Stroke(width = 3f * px))
+            DoranMood.THINKING -> drawCircle(
+                DoranPalette.Ink.copy(alpha = 0.8f),
+                ring,
+                c,
+                style = Stroke(width = 3f * px, pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(8f * px, 8f * px))),
+            )
+            DoranMood.SPEAKING -> drawCircle(DoranPalette.Accent, ring, c, style = Stroke(width = 6f * px))
+            else -> Unit
+        }
+    }
+
     // 말하는 중: 바깥으로 퍼지는 물결 세 겹
-    if (speak > 0f) {
+    if (speak > 0f && !still) {
         for (i in 0 until 3) {
             val phase = (t * 0.9f + i / 3f) % 1f
             drawCircle(
@@ -100,7 +122,7 @@ private fun DrawScope.drawOrb(mood: DoranMood, t: Float, lean: Float, level: Flo
             )
         }
     }
-    if (mood == DoranMood.HAPPY) {
+    if (mood == DoranMood.HAPPY && !still) {
         val phase = (t * 1.4f) % 1f
         drawCircle(
             DoranPalette.AccentSoft.copy(alpha = (1f - phase) * 0.7f),
@@ -115,11 +137,12 @@ private fun DrawScope.drawOrb(mood: DoranMood, t: Float, lean: Float, level: Flo
     val n = 120
     for (k in 0..n) {
         val a = (k.toFloat() / n) * 2f * PI.toFloat()
-        val wobble = when (mood) {
-            DoranMood.LISTENING -> (0.03f + 0.11f * level) * (0.6f * sin(3 * a + t * 5f) + 0.4f * sin(5 * a - t * 7f)) + 0.012f * sin(4 * a + t * 3f)
-            DoranMood.SPEAKING -> 0.05f * speak * sin(6 * a + t * 9f)
-            DoranMood.THINKING -> 0.012f * sin(2 * a - t * 4f)
-            else -> if (still) 0f else 0.008f * sin(3 * a + t * 1.2f)
+        val wobble = when {
+            still -> 0f
+            mood == DoranMood.LISTENING -> (0.03f + 0.11f * level) * (0.6f * sin(3 * a + t * 5f) + 0.4f * sin(5 * a - t * 7f)) + 0.012f * sin(4 * a + t * 3f)
+            mood == DoranMood.THINKING -> 0.012f * sin(2 * a - t * 4f)
+            mood == DoranMood.SPEAKING -> 0f
+            else -> 0.008f * sin(3 * a + t * 1.2f)
         }
         val rr = r * (1f + wobble)
         val x = c.x + rr * cos(a)
@@ -135,11 +158,8 @@ private fun DrawScope.drawOrb(mood: DoranMood, t: Float, lean: Float, level: Flo
             radius = r * 1.7f,
         ),
     )
-    // 윗면 반사광
-    drawOval(Color.White.copy(alpha = 0.16f), topLeft = Offset(c.x - r * 0.55f, c.y - r * 0.78f), size = Size(r * 0.75f, r * 0.42f))
-
     // 생각 중: 가장자리를 따라 도는 빛
-    if (think > 0f) {
+    if (think > 0f && !still) {
         drawArc(
             DoranPalette.Ink.copy(alpha = 0.85f * think),
             startAngle = (t * 260f) % 360f,

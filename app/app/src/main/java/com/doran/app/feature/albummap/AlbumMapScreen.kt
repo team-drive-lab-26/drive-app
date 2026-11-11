@@ -206,7 +206,7 @@ private fun PinPanel(pin: MapPin, playingId: String?, onToggle: (Voice) -> Unit,
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Text(voice.speaker, style = MaterialTheme.typography.titleLarge, color = DoranPalette.Ink)
-                    Text(if (voice.available) "${voice.seconds}초" else "이 기기에 파일이 없어", style = MaterialTheme.typography.bodyMedium, color = DoranPalette.InkSoft)
+                    Text(if (voice.available) "${voice.seconds}초" else "다른 기기에서 남긴 목소리라 여기선 못 들어", style = MaterialTheme.typography.bodyMedium, color = DoranPalette.InkSoft)
                 }
                 if (voice.available) {
                     Text(if (playingId == voice.capsuleId) "멈추기" else "들어보기", style = MaterialTheme.typography.labelLarge, color = DoranPalette.Accent)
@@ -237,9 +237,9 @@ internal class MapProjection(
         val s = scale(z, tilt)
         val far = scale(1f, tilt)
         val top = height * 0.30f
-        val bottom = height * 0.88f
+        val bottom = height * 0.80f
         val y = bottom - (1f - s) / (1f - far) * (bottom - top)
-        return Offset(width / 2f + x * width * 0.40f * s, y)
+        return Offset(width / 2f + x * width * 0.34f * s, y)
     }
 
     fun pinHead(pin: MapPin, width: Float, height: Float, tilt: Float): Offset {

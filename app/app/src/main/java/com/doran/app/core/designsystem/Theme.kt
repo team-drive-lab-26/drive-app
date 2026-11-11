@@ -13,6 +13,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.unit.sp
 import com.doran.app.R
@@ -30,6 +31,7 @@ object DoranPalette {
 
     val Background get() = pick(0xFF0B1018, 0xFFE8EDF2)
     val Ridge get() = pick(0xFF121A26, 0xFFD2DAE2)
+    val Ground get() = pick(0xFF0F1520, 0xFFDDE3E9)
     val Road get() = pick(0xFF161E2A, 0xFF4A5361)
     val RoadEdge get() = pick(0xFF2E3A4C, 0xFFF4F6F8)
     val LaneMark get() = pick(0xFF3A475B, 0xFFE3E8ED)
@@ -76,15 +78,16 @@ private const val TABULAR = "tnum"
 
 // 한글이 글자 단위로 끊겨 한 글자만 다음 줄에 남지 않게 어절 단위로 끊는다
 private val Phrase = LineBreak(LineBreak.Strategy.Balanced, LineBreak.Strictness.Strict, LineBreak.WordBreak.Phrase)
+private val Korean = LocaleList("ko-KR")
 
 object DoranText {
     /** 시각, 거리, 초. 자리가 흔들리지 않게 고정폭 숫자 */
-    val number = TextStyle(fontFamily = Suit, fontSize = 18.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold, fontFeatureSettings = TABULAR)
-    val countdown = TextStyle(fontFamily = Suit, fontSize = 112.sp, lineHeight = 112.sp, fontWeight = FontWeight.ExtraBold, fontFeatureSettings = TABULAR, letterSpacing = (-2).sp)
+    val number = TextStyle(localeList = Korean, fontFamily = Suit, fontSize = 18.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold, fontFeatureSettings = TABULAR)
+    val countdown = TextStyle(localeList = Korean, fontFamily = Suit, fontSize = 112.sp, lineHeight = 112.sp, fontWeight = FontWeight.ExtraBold, fontFeatureSettings = TABULAR, letterSpacing = (-2).sp)
 
     /** 길가 표지판 이름. 거리에 따라 크기를 줄여 쓴다 */
-    val sign = TextStyle(fontFamily = Suit, fontSize = 27.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold)
-    val signSub = TextStyle(fontFamily = Suit, fontSize = 20.sp, lineHeight = 24.sp, fontWeight = FontWeight.Medium, fontFeatureSettings = TABULAR)
+    val sign = TextStyle(localeList = Korean, fontFamily = Suit, fontSize = 27.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold)
+    val signSub = TextStyle(localeList = Korean, fontFamily = Suit, fontSize = 20.sp, lineHeight = 24.sp, fontWeight = FontWeight.Medium, fontFeatureSettings = TABULAR)
 }
 
 private fun doranColors() = if (DoranPalette.isDay) {
@@ -119,14 +122,14 @@ private fun doranColors() = if (DoranPalette.isDay) {
 
 // 주행 자막 34sp 이상, 본문 18sp 이상. 운전 중 한 번에 읽히는 크기
 private val DoranType = Typography(
-    displayMedium = TextStyle(fontFamily = Suit, fontSize = 40.sp, lineHeight = 50.sp, fontWeight = FontWeight.Bold, lineBreak = Phrase),
-    headlineLarge = TextStyle(fontFamily = Suit, fontSize = 36.sp, lineHeight = 46.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.5).sp, lineBreak = Phrase),
-    headlineMedium = TextStyle(fontFamily = Suit, fontSize = 30.sp, lineHeight = 38.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.3).sp, lineBreak = Phrase),
-    titleLarge = TextStyle(fontFamily = Suit, fontSize = 23.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold),
-    titleMedium = TextStyle(fontFamily = Suit, fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.SemiBold),
-    bodyLarge = TextStyle(fontFamily = Suit, fontSize = 20.sp, lineHeight = 30.sp, lineBreak = Phrase),
-    bodyMedium = TextStyle(fontFamily = Suit, fontSize = 18.sp, lineHeight = 26.sp, lineBreak = Phrase),
-    labelLarge = TextStyle(fontFamily = Suit, fontSize = 21.sp, lineHeight = 26.sp, fontWeight = FontWeight.Bold),
+    displayMedium = TextStyle(localeList = Korean, fontFamily = Suit, fontSize = 40.sp, lineHeight = 50.sp, fontWeight = FontWeight.Bold, lineBreak = Phrase),
+    headlineLarge = TextStyle(localeList = Korean, fontFamily = Suit, fontSize = 36.sp, lineHeight = 46.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.5).sp, lineBreak = Phrase),
+    headlineMedium = TextStyle(localeList = Korean, fontFamily = Suit, fontSize = 30.sp, lineHeight = 38.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.3).sp, lineBreak = Phrase),
+    titleLarge = TextStyle(localeList = Korean, fontFamily = Suit, fontSize = 23.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold, lineBreak = Phrase),
+    titleMedium = TextStyle(localeList = Korean, fontFamily = Suit, fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.SemiBold, lineBreak = Phrase),
+    bodyLarge = TextStyle(localeList = Korean, fontFamily = Suit, fontSize = 20.sp, lineHeight = 30.sp, lineBreak = Phrase),
+    bodyMedium = TextStyle(localeList = Korean, fontFamily = Suit, fontSize = 18.sp, lineHeight = 26.sp, lineBreak = Phrase),
+    labelLarge = TextStyle(localeList = Korean, fontFamily = Suit, fontSize = 21.sp, lineHeight = 26.sp, fontWeight = FontWeight.Bold),
 )
 
 @Composable

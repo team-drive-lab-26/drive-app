@@ -123,7 +123,7 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = viewModel(
         Column(Modifier.padding(vertical = 24.dp)) {
             Text("가족 이름", style = MaterialTheme.typography.titleLarge, color = DoranPalette.Ink)
             Text(
-                "녹음한 뒤 \"누가 남겼어?\"에 나오는 이름이에요. 사람마다 테이프에 칠할 색이 정해져 있어요. 눌러서 빼요.",
+                "녹음한 뒤 \"누가 남겼어?\"에 나오는 이름이에요. 사람마다 앨범 지도 핀 색이 정해져 있어요. 눌러서 빼요.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = DoranPalette.InkSoft,
             )

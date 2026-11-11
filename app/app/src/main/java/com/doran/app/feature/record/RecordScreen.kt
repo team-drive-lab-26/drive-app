@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -36,11 +35,15 @@ import com.doran.app.core.designsystem.DoranPrimaryButton
 import com.doran.app.core.designsystem.DoranSecondaryButton
 import com.doran.app.core.designsystem.DoranText
 import com.doran.app.core.designsystem.RibbonButton
+import com.doran.app.core.designsystem.RoadScene
+import com.doran.app.core.designsystem.RoadSide
+import com.doran.app.core.designsystem.RoadSign
 import com.doran.app.core.media.CapsuleRecorder
 
 /**
  * 목소리 캡슐 녹음과 남긴 사람 고르기. 끝나거나 취소하면 [onClose].
- * 가운데 도란이 마이크 소리만큼 출렁이고, 둘레를 따라 15초가 채워진다.
+ * 같은 앞길 위, 지금 세운 곳이 바로 앞 길가에 주황 표지판으로 서 있다. 내 차 자리의 도란이 마이크 소리만큼 출렁이고,
+ * 둘레를 따라 15초가 채워진다.
  */
 @Composable
 fun RecordScreen(onClose: () -> Unit, viewModel: RecordViewModel = viewModel(factory = RecordViewModel.Factory)) {
@@ -49,20 +52,36 @@ fun RecordScreen(onClose: () -> Unit, viewModel: RecordViewModel = viewModel(fac
         if (ui.phase == RecordPhase.DONE) onClose()
     }
     val progress = (ui.elapsedMs.toFloat() / CapsuleRecorder.MAX_MS).coerceIn(0f, 1f)
+    val place = ui.placeName.ifBlank { "여기" }
+    val signs = listOf(RoadSign("here", place, "지금 세운 곳", 0.08f, RoadSide.RIGHT, hot = true))
 
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(DoranPalette.Background)
-            .padding(horizontal = 56.dp, vertical = 44.dp),
-    ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+    Box(Modifier.fillMaxSize().background(DoranPalette.Background)) {
+        RoadScene(signs = signs, horizon = 0.40f, orbSize = 210.dp) {
+            Box(Modifier.fillMaxSize()) {
+                // 15초 둘레. 지난 시간만큼 주황으로 찬다
+                Canvas(Modifier.fillMaxSize()) {
+                    val stroke = 6.dp.toPx()
+                    val inset = stroke / 2f
+                    val arcSize = Size(size.width - stroke, size.height - stroke)
+                    drawArc(DoranPalette.Line, 0f, 360f, false, topLeft = Offset(inset, inset), size = arcSize, style = Stroke(stroke))
+                    drawArc(DoranPalette.Accent, -90f, 360f * progress, false, topLeft = Offset(inset, inset), size = arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+                }
+                DoranCharacter(
+                    mood = when (ui.phase) {
+                        RecordPhase.RECORDING -> DoranMood.LISTENING
+                        RecordPhase.CHOOSE_SPEAKER -> DoranMood.HAPPY
+                        else -> DoranMood.IDLE
+                    },
+                    level = ui.level,
+                    modifier = Modifier.fillMaxSize().padding(14.dp),
+                )
+            }
+        }
+
+        Row(Modifier.fillMaxWidth().padding(start = 48.dp, end = 48.dp, top = 32.dp), verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
                 when (ui.phase) {
-                    RecordPhase.RECORDING -> Heading(
-                        if (ui.placeName.isBlank()) "한마디 남겨 줘" else "${ui.placeName}에서 한마디",
-                        "듣고 있어. 15초 안에 말하면 돼.",
-                    )
+                    RecordPhase.RECORDING -> Heading("${place}에서 한마디", "듣고 있어. 15초 안에 말하면 돼.")
                     RecordPhase.CHOOSE_SPEAKER -> Heading(
                         "누가 남겼어?",
                         "${ui.elapsedMs.coerceAtMost(CapsuleRecorder.MAX_MS) / 1000}초 녹음했어. 고르면 앨범 지도에 그 사람 색 핀으로 남길게.",
@@ -79,27 +98,7 @@ fun RecordScreen(onClose: () -> Unit, viewModel: RecordViewModel = viewModel(fac
             }
         }
 
-        Box(Modifier.align(Alignment.Center).size(320.dp)) {
-            // 15초 둘레. 지난 시간만큼 주황으로 찬다
-            Canvas(Modifier.fillMaxSize()) {
-                val stroke = 6.dp.toPx()
-                val inset = stroke / 2f
-                val arcSize = Size(size.width - stroke, size.height - stroke)
-                drawArc(DoranPalette.Line, 0f, 360f, false, topLeft = Offset(inset, inset), size = arcSize, style = Stroke(stroke))
-                drawArc(DoranPalette.Accent, -90f, 360f * progress, false, topLeft = Offset(inset, inset), size = arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
-            }
-            DoranCharacter(
-                mood = when (ui.phase) {
-                    RecordPhase.RECORDING -> DoranMood.LISTENING
-                    RecordPhase.CHOOSE_SPEAKER -> DoranMood.HAPPY
-                    else -> DoranMood.IDLE
-                },
-                level = ui.level,
-                modifier = Modifier.fillMaxSize().padding(24.dp),
-            )
-        }
-
-        Box(Modifier.align(Alignment.BottomStart).fillMaxWidth()) {
+        Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(start = 48.dp, end = 48.dp, bottom = 40.dp)) {
             when (ui.phase) {
                 RecordPhase.RECORDING -> {
                     DoranPrimaryButton(text = "다 했어", onClick = viewModel::finishRecording)
@@ -127,10 +126,11 @@ private fun Heading(title: String, body: String) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ChooseSpeaker(family: List<String>, onChoose: (String) -> Unit) {
+    // 가운데 도란을 피해 왼쪽 길가 쪽에만 놓는다
     FlowRow(
-        Modifier.width(820.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        Modifier.width(360.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         family.forEach { name -> RibbonButton(name = name, onClick = { onChoose(name) }) }
     }

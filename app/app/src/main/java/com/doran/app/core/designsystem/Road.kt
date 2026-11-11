@@ -54,7 +54,7 @@ data class RoadSign(
 )
 
 /** 거리(km)를 도로 깊이로. 가까운 곳은 넓게, 먼 곳은 지평선 쪽으로 몰린다 */
-fun depthForKm(km: Double): Float = (km / (km + 80.0)).toFloat().coerceIn(0.04f, 0.92f)
+fun depthForKm(km: Double): Float = (km / (km + 40.0)).toFloat().coerceIn(0.06f, 0.92f)
 
 /** 원근 도로의 모양. 화면 크기(px)와 지평선 높이로 정한다 */
 private class RoadGeometry(val width: Float, val height: Float, horizonFraction: Float) {
@@ -170,6 +170,8 @@ fun RoadScene(
                 lineTo(w, g.horizon)
                 close()
             }
+            // 길 밖 땅. 하늘과 한 단계 다른 색으로 바닥면을 만든다
+            drawRect(DoranPalette.Ground, topLeft = Offset(0f, g.horizon), size = androidx.compose.ui.geometry.Size(w, h - g.horizon))
             drawPath(ridge, DoranPalette.Ridge)
             drawLine(DoranPalette.Line, Offset(0f, g.horizon), Offset(w, g.horizon), strokeWidth = 1.dp.toPx())
 
@@ -185,6 +187,23 @@ fun RoadScene(
             val edge = 3.dp.toPx()
             drawLine(DoranPalette.RoadEdge, Offset(g.vx - g.bottomHalf, g.bottom), Offset(g.vx - g.topHalf, g.horizon), strokeWidth = edge)
             drawLine(DoranPalette.RoadEdge, Offset(g.vx + g.bottomHalf, g.bottom), Offset(g.vx + g.topHalf, g.horizon), strokeWidth = edge)
+            // 지평선 쪽 공기. 멀수록 하늘색에 묻힌다
+            drawRect(
+                androidx.compose.ui.graphics.Brush.verticalGradient(
+                    0f to DoranPalette.Background.copy(alpha = 0.85f),
+                    1f to DoranPalette.Background.copy(alpha = 0f),
+                    startY = g.horizon,
+                    endY = g.horizon + (h - g.horizon) * 0.35f,
+                ),
+                topLeft = Offset(0f, g.horizon),
+                size = androidx.compose.ui.geometry.Size(w, (h - g.horizon) * 0.35f),
+            )
+            // 도란이 길에 닿은 그림자
+            drawOval(
+                androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.35f),
+                topLeft = Offset(g.vx - orbPx * 0.42f, h - liftPx - orbPx * 0.16f),
+                size = androidx.compose.ui.geometry.Size(orbPx * 0.84f, orbPx * 0.16f),
+            )
 
             // 차선. 깊이마다 짧아지고 가늘어진다
             listOf(0.02f, 0.12f, 0.26f, 0.45f, 0.7f).forEach { d ->
@@ -219,18 +238,28 @@ fun RoadScene(
                     drawPath(route, DoranPalette.Accent.copy(alpha = 0.9f))
                 } else {
                     // 경유지를 거쳐 가는 선. 곧은 선 위의 같은 높이 점에서 경유지 쪽으로 벌어진다
-                    // 경유지가 아주 가까워도 선이 먼저 앞으로 뻗은 뒤 휘게, 닿는 점을 도란보다 충분히 앞에 둔다
-                    val raw = g.viaPoint(target)
-                    val vy = minOf(raw.y, from.y - (from.y - end.y) * 0.4f)
-                    val v = Offset(g.vx + (raw.x - g.vx) * ((vy - end.y) / (raw.y - end.y)).coerceIn(0.3f, 1f), vy)
-                    val straight = Offset(g.vx, v.y)
-                    val via = Offset(straight.x + (v.x - straight.x) * bend, v.y)
+                    // 경유지 표지판 깊이의 길바닥, 길 가장자리 안쪽을 거쳐 간다
+                    val v = g.viaPoint(target)
+                    val via = Offset(g.vx + (v.x - g.vx) * bend, v.y)
+                    // 위쪽 곡선 제어점은 그 높이의 길 안쪽으로 묶어 선이 길 밖으로 나가지 않게 한다
+                    val upY = via.y - (via.y - end.y) * 0.45f
+                    val upHalf = g.halfWidth(upY) * 0.82f
+                    val upX = via.x.coerceIn(g.vx - upHalf, g.vx + upHalf)
                     val path = Path().apply {
                         moveTo(from.x, from.y)
                         cubicTo(from.x, from.y - (from.y - via.y) * 0.55f, via.x, via.y + (from.y - via.y) * 0.45f, via.x, via.y)
-                        cubicTo(via.x, via.y - (via.y - end.y) * 0.45f, end.x, end.y + (via.y - end.y) * 0.35f, end.x, end.y)
+                        cubicTo(upX, upY, end.x, end.y + (via.y - end.y) * 0.35f, end.x, end.y)
                     }
                     drawPath(path, DoranPalette.Accent.copy(alpha = 0.9f), style = Stroke(width = 6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+                    // 휜 점에서 표지판 기둥 밑까지 짧은 점선
+                    val poleBase = Offset(g.poleX(target, margin), g.groundY(target.depth))
+                    drawLine(
+                        DoranPalette.Accent.copy(alpha = bend),
+                        via,
+                        poleBase,
+                        strokeWidth = 2.dp.toPx(),
+                        pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 6.dp.toPx())),
+                    )
                     drawCircle(DoranPalette.Accent, radius = 9.dp.toPx() * bend, center = via)
                     drawCircle(DoranPalette.Background, radius = 4.dp.toPx() * bend, center = via)
                 }
