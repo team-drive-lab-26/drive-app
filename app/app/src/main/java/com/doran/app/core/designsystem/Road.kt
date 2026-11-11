@@ -219,13 +219,16 @@ fun RoadScene(
                     drawPath(route, DoranPalette.Accent.copy(alpha = 0.9f))
                 } else {
                     // 경유지를 거쳐 가는 선. 곧은 선 위의 같은 높이 점에서 경유지 쪽으로 벌어진다
-                    val v = g.viaPoint(target)
+                    // 경유지가 아주 가까워도 선이 먼저 앞으로 뻗은 뒤 휘게, 닿는 점을 도란보다 충분히 앞에 둔다
+                    val raw = g.viaPoint(target)
+                    val vy = minOf(raw.y, from.y - (from.y - end.y) * 0.4f)
+                    val v = Offset(g.vx + (raw.x - g.vx) * ((vy - end.y) / (raw.y - end.y)).coerceIn(0.3f, 1f), vy)
                     val straight = Offset(g.vx, v.y)
                     val via = Offset(straight.x + (v.x - straight.x) * bend, v.y)
                     val path = Path().apply {
                         moveTo(from.x, from.y)
-                        quadraticTo(via.x, (from.y + via.y) / 2f, via.x, via.y)
-                        quadraticTo(via.x, (via.y + end.y) / 2f + (end.y - via.y) * 0.2f, end.x, end.y)
+                        cubicTo(from.x, from.y - (from.y - via.y) * 0.55f, via.x, via.y + (from.y - via.y) * 0.45f, via.x, via.y)
+                        cubicTo(via.x, via.y - (via.y - end.y) * 0.45f, end.x, end.y + (via.y - end.y) * 0.35f, end.x, end.y)
                     }
                     drawPath(path, DoranPalette.Accent.copy(alpha = 0.9f), style = Stroke(width = 6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
                     drawCircle(DoranPalette.Accent, radius = 9.dp.toPx() * bend, center = via)
