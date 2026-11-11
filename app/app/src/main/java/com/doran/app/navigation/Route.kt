@@ -9,8 +9,9 @@ sealed interface Route {
     @Serializable
     data object Album : Route
 
+    /** 여행 하나의 3D 지도 앨범 */
     @Serializable
-    data object AlbumMap : Route
+    data class AlbumMap(val sessionId: String) : Route
 
     @Serializable
     data object Character : Route
@@ -29,10 +30,16 @@ sealed interface Route {
 
     companion object {
         /** 디버그 인텐트에서 쓰는 이름 → 화면 */
-        fun byName(name: String): Route? = when (name.lowercase()) {
+        fun byName(name: String, currentSessionId: String): Route? = when {
+            // "albummap:<session_id>"로 다른 여행의 지도를 연다
+            name.startsWith("albummap:") -> AlbumMap(name.substringAfter(':'))
+            else -> byPlainName(name.lowercase(), currentSessionId)
+        }
+
+        private fun byPlainName(name: String, currentSessionId: String): Route? = when (name) {
             "onboarding" -> Onboarding
             "album" -> Album
-            "albummap" -> AlbumMap
+            "albummap" -> AlbumMap(currentSessionId)
             "character", "home" -> Character
             "settings" -> Settings
             "record" -> Record

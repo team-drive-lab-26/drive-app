@@ -59,6 +59,7 @@ class MainActivity : ComponentActivity() {
             onChooseCard = viewModel::chooseCard,
             onDismissCards = viewModel::dismissCards,
             onRequestMusic = viewModel::requestMusic,
+            currentSessionId = (application as DoranApplication).container.tripCoordinator.sessionId,
         )
         setContent {
             DoranTheme {

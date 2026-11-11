@@ -106,3 +106,35 @@ data class TripRecordRequest(
 
 @Serializable
 data class StatusResponse(val status: String)
+
+@Serializable
+data class TripSummaryDto(
+    @SerialName("session_id") val sessionId: String,
+    val region: String = "",
+    @SerialName("started_at") val startedAt: String = "",
+    @SerialName("ended_at") val endedAt: String? = null,
+    @SerialName("event_count") val eventCount: Int = 0,
+)
+
+@Serializable
+data class TripListDto(val status: String, val trips: List<TripSummaryDto> = emptyList())
+
+@Serializable
+data class TripEventDto(
+    val type: String,
+    val id: String,
+    val name: String = "",
+    val category: String = "",
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    @SerialName("recorded_at") val recordedAt: String = "",
+)
+
+@Serializable
+data class TripEventsDto(
+    val status: String,
+    @SerialName("session_id") val sessionId: String = "",
+    val events: List<TripEventDto> = emptyList(),
+    /** [위도, 경도] 목록. 앨범 지도에 그리는 길 */
+    val route: List<List<Double>> = emptyList(),
+)

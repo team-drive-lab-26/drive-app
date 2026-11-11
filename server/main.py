@@ -245,7 +245,19 @@ class AgentService:
             return {"status": "ok", "trips": self.trips.list_trips()}
         if not isinstance(session_id, str) or not SESSION_ID.fullmatch(session_id):
             raise ValueError("session_id 형식이 올바르지 않습니다")
-        return {"status": "ok", "session_id": session_id, "events": self.trips.list_events(session_id)}
+        return {"status": "ok", "session_id": session_id, "events": self.trips.list_events(session_id), "route": self._route_line()}
+
+    def _route_line(self, max_points: int = 120) -> list[list[float]]:
+        """앨범 지도에 그릴 시연 경로. 점이 많으면 고르게 줄인다."""
+        route = getattr(self.knowledge, "route", None)
+        if not route:
+            return []
+        points = route.points
+        step = max(1, len(points) // max_points)
+        picked = points[::step]
+        if picked[-1] is not points[-1]:
+            picked.append(points[-1])
+        return [[round(p.latitude, 5), round(p.longitude, 5)] for p in picked]
 
     def _session(self, session_id: str) -> Session:
         if session_id not in self.sessions:

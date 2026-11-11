@@ -6,7 +6,9 @@ import com.doran.app.core.network.DoranApi
 import com.doran.app.core.network.EffectDto
 import com.doran.app.core.network.NavigationDto
 import com.doran.app.core.network.NetworkModule
+import com.doran.app.core.network.TripEventsDto
 import com.doran.app.core.network.TripRecordRequest
+import com.doran.app.core.network.TripSummaryDto
 import com.doran.app.core.network.VehicleDto
 
 data class AgentReply(
@@ -75,6 +77,10 @@ class AgentRepository(baseUrl: String) {
         // 정차 기록의 이름·좌표는 서버가 후보 목록에서 채운다. 목록에 없는 곳은 이름만 남는다
         requireApi().recordTrip(TripRecordRequest(sessionId, type, id, name, category))
     }
+
+    suspend fun trips(): List<TripSummaryDto> = requireApi().trips().trips
+
+    suspend fun tripEvents(sessionId: String): TripEventsDto = requireApi().tripEvents(sessionId)
 
     private fun requireApi(): DoranApi = checkNotNull(api) { "AI 서버 주소가 없어" }
 }

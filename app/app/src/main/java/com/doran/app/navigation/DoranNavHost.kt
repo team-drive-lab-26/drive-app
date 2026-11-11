@@ -28,6 +28,7 @@ class DoranActions(
     val onChooseCard: (AgentCard) -> Unit,
     val onDismissCards: () -> Unit,
     val onRequestMusic: () -> Unit,
+    val currentSessionId: String,
 )
 
 val MainUiState.face: DoranFace
@@ -54,7 +55,7 @@ fun DoranNavHost(ui: MainUiState, actions: DoranActions, onboarded: Boolean) {
     // 시연 촬영과 디버그용. 바깥에서 화면 이름으로 이동을 요청한다
     LaunchedEffect(ui.local.requestedRoute) {
         val route = ui.local.requestedRoute ?: return@LaunchedEffect
-        Route.byName(route)?.let { nav.navigate(it) { launchSingleTop = true } }
+        Route.byName(route, actions.currentSessionId)?.let { nav.navigate(it) { launchSingleTop = true } }
         actions.onRouteHandled()
     }
 
@@ -71,14 +72,11 @@ fun DoranNavHost(ui: MainUiState, actions: DoranActions, onboarded: Boolean) {
         }
         composable<Route.Album> {
             AlbumScreen(
-                onOpenMap = { nav.navigate(Route.AlbumMap) },
-                onOpenCharacter = { nav.navigate(Route.Character) },
-                onOpenSettings = { nav.navigate(Route.Settings) },
-                onOpenRecord = { nav.navigate(Route.Record) },
-                onOpenMusic = { nav.navigate(Route.Music) },
+                onOpenTrip = { sessionId -> nav.navigate(Route.AlbumMap(sessionId)) },
+                onBack = { nav.popBackStack() },
             )
         }
-        composable<Route.AlbumMap> { AlbumMapScreen() }
+        composable<Route.AlbumMap> { AlbumMapScreen(onBack = { nav.popBackStack() }) }
         composable<Route.Character> {
             CharacterScreen(
                 face = ui.face,
