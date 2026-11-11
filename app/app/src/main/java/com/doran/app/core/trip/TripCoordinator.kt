@@ -552,6 +552,10 @@ class TripCoordinator(
             doorsClosed = !state.isAnyDoorOpen,
             lastStopMinutes = context.lastStopMinutes,
             continuousDrivingMinutes = context.continuousDrivingMinutes,
+            batteryPercent = state.batteryPercent,
+            passengerCount = state.buckledSeats,
+            wiperOn = state.isWiperOn,
+            headlightOn = state.isHeadlightOn,
         )
     }
 

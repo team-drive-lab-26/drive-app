@@ -18,7 +18,7 @@
 | `kind` | `vehicle_event` 또는 `user_utterance` |
 | `event` | 차량 이벤트인 경우 `trip_started`, `arrival_30m`, `reboarded`, `continuous_drive`, `return_started` 중 하나 |
 | `utterance` | 사용자 발화인 경우 한국어 문자열 |
-| `vehicle` | `gear`, 선택적으로 `doors_closed`, `last_stop_minutes`, `continuous_driving_minutes` |
+| `vehicle` | `gear`, 선택적으로 `doors_closed`, `last_stop_minutes`, `continuous_driving_minutes`, `battery_percent`(EV 배터리 %), `passenger_count`(안전벨트를 맨 좌석 수), `wiper_on`, `headlight_on`. 차량이 값을 주지 않으면 빠진다. 에이전트는 아직 뒤의 네 값을 쓰지 않는다 |
 | `navigation` | 선택적으로 `distance_from_home_km`, `eta_minutes`, `arrival_local_time`(`HH:MM`), `destination_is_home`, `minutes_since_departure` |
 | `places` | `id`, `name`, `source: "tour_api"`, `category`, `along_route`가 있는 후보 목록 |
 | `rest_stops` | `id`, `name`, `source: "expressway_api"`, `along_route`, 선택적으로 `eta_minutes`가 있는 후보 목록 |
