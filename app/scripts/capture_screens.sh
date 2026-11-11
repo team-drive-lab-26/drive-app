@@ -13,19 +13,29 @@ shot() {
 
 # 화면에 보이는 글자로 버튼을 찾아 누른다
 tap() {
-  adb shell uiautomator dump /sdcard/ui.xml > /dev/null
-  adb pull /sdcard/ui.xml ui.xml > /dev/null
-  local bounds
-  bounds=$(python3 - "$1" <<'EOF'
+  local bounds="" try
+  # uiautomator dump는 첫 시도에 빈 파일을 낼 때가 있어 몇 번 다시 한다
+  for try in 1 2 3 4; do
+    adb shell rm -f /sdcard/ui.xml
+    adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1
+    adb pull /sdcard/ui.xml ui.xml > /dev/null 2>&1
+    bounds=$(python3 - "$1" <<'EOF'
 import re, sys, xml.etree.ElementTree as ET
 label = sys.argv[1]
-for node in ET.parse("ui.xml").iter("node"):
+try:
+    nodes = list(ET.parse("ui.xml").iter("node"))
+except Exception:
+    nodes = []
+for node in nodes:
     if node.get("text") == label or node.get("content-desc") == label:
         x1, y1, x2, y2 = map(int, re.findall(r"\d+", node.get("bounds")))
         print((x1 + x2) // 2, (y1 + y2) // 2)
         break
 EOF
 )
+    [ -n "$bounds" ] && break
+    sleep 2
+  done
   if [ -z "$bounds" ]; then
     echo "못 찾음: $1"
     return 1
