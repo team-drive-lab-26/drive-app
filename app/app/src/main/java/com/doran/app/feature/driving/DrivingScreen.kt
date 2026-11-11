@@ -16,7 +16,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** 주행 중에는 음성 버튼(듣는 중에는 정지) 하나와 자막 한 줄만 둔다 */
+/** 주행 중에는 음성 버튼(듣는 중에는 정지) 하나와 자막 한 줄만 둔다. 버튼은 "도란아" 호출어가 안 될 때의 예비 수단이다 */
 @Composable
 fun DrivingScreen(caption: String, isListening: Boolean, onListen: () -> Unit) {
     Column(
@@ -33,7 +33,7 @@ fun DrivingScreen(caption: String, isListening: Boolean, onListen: () -> Unit) {
             Text(if (isListening) "■" else "●", fontSize = 24.sp, color = MaterialTheme.colorScheme.primary)
         }
         Text(
-            caption.ifBlank { "도란에게 말해 보세요" },
+            caption.ifBlank { "\"도란아\" 하고 불러 보세요" },
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             fontSize = 24.sp,

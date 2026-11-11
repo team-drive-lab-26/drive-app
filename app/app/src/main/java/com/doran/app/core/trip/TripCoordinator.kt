@@ -11,8 +11,12 @@ import com.doran.app.core.network.NavigationDto
 import com.doran.app.core.network.VehicleDto
 import com.doran.app.core.voice.DoranVoice
 import com.doran.app.core.voice.ListenResult
+import com.doran.app.core.voice.VoiceEngine
+import com.doran.app.core.voice.WakeMatch
+import com.doran.app.core.voice.WakeWord
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,6 +34,10 @@ data class TripLog(val atMillis: Long, val text: String)
 data class TripConversationState(
     val caption: String = "",
     val isThinking: Boolean = false,
+    /** 호출어 대기 중. 이때 들은 말은 화면에 보이지 않고 서버로 보내지 않는다 */
+    val isStandby: Boolean = false,
+    /** 호출됐거나 제안에 대한 답을 듣는 중 */
+    val isAwake: Boolean = false,
     /** 디버그 패널에서 보는 최근 기록 */
     val logs: List<TripLog> = emptyList(),
 )
@@ -54,6 +62,11 @@ class TripCoordinator(
     private val waypointIds = mutableMapOf<String, String>()
     private var pendingTrackId: String? = null
     private var started = false
+
+    // 호출어 대기. 마이크 권한을 받으면 켜고, 녹음처럼 마이크를 따로 쓰는 동안은 멈춘다
+    private var handsFree = false
+    private var standbyPaused = false
+    private var standbyJob: Job? = null
 
     private val _state = MutableStateFlow(TripConversationState())
     val state: StateFlow<TripConversationState> = _state.asStateFlow()
@@ -95,13 +108,20 @@ class TripCoordinator(
 
     // ---- 화면에서 부르는 동작 ----
 
+    /** 버튼·캐릭터 터치, "도란아" 호출, 제안 뒤에 다음 한 문장을 듣는다 */
     fun listen() {
         if (_state.value.isThinking) return
+        stopStandby()
         setCaption("듣고 있어")
+        _state.update { it.copy(isAwake = true) }
         voice.listen { result ->
+            _state.update { it.copy(isAwake = false) }
             when (result) {
                 is ListenResult.Heard -> submitUtterance(result.text)
-                ListenResult.NothingHeard -> setCaption("다시 말해 줘")
+                ListenResult.NothingHeard -> {
+                    setCaption("다시 말해 줘")
+                    scheduleStandby()
+                }
                 ListenResult.Unavailable -> setCaption("음성 인식을 사용할 수 없어")
             }
         }
@@ -109,7 +129,28 @@ class TripCoordinator(
 
     fun cancelListening() {
         voice.cancelListening()
+        _state.update { it.copy(isAwake = false) }
         setCaption("")
+        scheduleStandby()
+    }
+
+    /** 마이크 권한을 받은 뒤 부른다. 이후로는 "도란아"만 불러도 듣는다 */
+    fun enableHandsFree() {
+        if (handsFree) return
+        handsFree = true
+        log("호출어 대기 시작")
+        scheduleStandby(delayMs = 0)
+    }
+
+    /** 음성 캡슐 녹음처럼 마이크를 따로 쓰기 전에 부른다 */
+    fun pauseStandby() {
+        standbyPaused = true
+        stopStandby()
+    }
+
+    fun resumeStandby() {
+        standbyPaused = false
+        scheduleStandby()
     }
 
     fun onMicPermissionDenied() = setCaption("마이크 권한이 필요해")
@@ -147,6 +188,58 @@ class TripCoordinator(
     fun startDemoRoute() {
         val result = navi.requestRoute("강릉역", 37.7643, 128.8996, "강원특별자치도 강릉시 용지로 176")
         log("경로 요청: 강릉역 → ${result::class.simpleName}")
+    }
+
+    // ---- 호출어 대기 ----
+
+    private fun scheduleStandby(delayMs: Long = STANDBY_RESTART_MS) {
+        if (!handsFree || standbyPaused) return
+        standbyJob?.cancel()
+        standbyJob = scope.launch {
+            delay(delayMs)
+            startStandby()
+        }
+    }
+
+    private fun startStandby() {
+        val s = _state.value
+        // 말하는 중, 생각하는 중, 이미 듣는 중이면 끝난 뒤 다시 부른다
+        if (!handsFree || standbyPaused || s.isThinking || s.isAwake || s.isStandby || voice.state.value.isSpeaking) return
+        // 음성 엔진은 앱을 켠 뒤 비동기로 준비되므로, 준비될 때까지 기다렸다가 켠다
+        if (voice.state.value.listener == VoiceEngine.NONE) {
+            scheduleStandby(STANDBY_WAIT_ENGINE_MS)
+            return
+        }
+        _state.update { it.copy(isStandby = true) }
+        voice.listen { result ->
+            _state.update { it.copy(isStandby = false) }
+            when (result) {
+                is ListenResult.Heard -> onStandbyHeard(result.text)
+                ListenResult.NothingHeard -> scheduleStandby()
+                ListenResult.Unavailable -> scheduleStandby(STANDBY_WAIT_ENGINE_MS)
+            }
+        }
+    }
+
+    private fun onStandbyHeard(text: String) {
+        when (val match = WakeWord.match(text)) {
+            WakeMatch.None -> scheduleStandby()
+            WakeMatch.CallOnly -> {
+                log("호출")
+                voice.chime()
+                say("응?", onDone = ::listen)
+            }
+            is WakeMatch.Command -> submitUtterance(match.text)
+        }
+    }
+
+    private fun stopStandby() {
+        standbyJob?.cancel()
+        standbyJob = null
+        if (_state.value.isStandby) {
+            voice.cancelListening()
+            _state.update { it.copy(isStandby = false) }
+        }
     }
 
     // ---- 이벤트 처리 ----
@@ -200,8 +293,12 @@ class TripCoordinator(
                     navigation = navigationOverride ?: navigationDto(),
                 )
                 log("응답(${reply.status}): ${reply.caption.ifBlank { reply.speech }.take(40)}")
-                // 이벤트에 제안이 없으면 조용히 넘어간다
-                if (isUtterance || reply.speech.isNotBlank()) deliver(reply, isUtterance)
+                when {
+                    // 사용자가 말하는 중에는 이벤트 제안이 끼어들지 않는다
+                    !isUtterance && _state.value.isAwake -> log("듣는 중이라 제안 건너뜀")
+                    // 이벤트에 제안이 없으면 조용히 넘어간다
+                    isUtterance || reply.speech.isNotBlank() -> deliver(reply, isUtterance)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
@@ -209,6 +306,8 @@ class TripCoordinator(
                 if (isUtterance) say("AI 서버에 연결할 수 없어")
             } finally {
                 if (isUtterance) _state.update { it.copy(isThinking = false) }
+                // 말할 게 없었거나 말하기에 실패했으면 바로 대기로 돌아간다. 말하는 중이면 끝난 뒤 돌아간다
+                scheduleStandby()
             }
         }
     }
@@ -236,13 +335,23 @@ class TripCoordinator(
         }
         if (reply.requestedCapsuleId != null) spoken = "녹음 재생 연결이 필요해."
         val caption = reply.caption.ifBlank { spoken }.ifBlank { if (isUtterance) "다시 말해 줘" else "" }
-        say(spoken, caption)
+        // 도란이 먼저 물어본 제안은 호출어 없이 바로 답을 듣는다("응", "아니")
+        val awaitAnswer = reply.status == "needs_confirmation" && pendingTrackId == null
+        say(spoken, caption, onDone = if (awaitAnswer) ::listen else ::scheduleStandbyNow)
     }
 
-    private fun say(text: String, caption: String = text) {
+    private fun say(text: String, caption: String = text, onDone: () -> Unit = ::scheduleStandbyNow) {
+        // 도란의 목소리를 호출어로 다시 받아 적지 않게, 말하는 동안은 마이크를 끈다
+        stopStandby()
         if (caption.isNotBlank()) setCaption(caption)
-        if (!voice.speak(text, onDone = ::playPendingTrack)) playPendingTrack()
+        val finish = {
+            playPendingTrack()
+            onDone()
+        }
+        if (!voice.speak(text, onDone = finish)) finish()
     }
+
+    private fun scheduleStandbyNow() = scheduleStandby()
 
     private fun playPendingTrack() {
         val trackId = pendingTrackId ?: return
@@ -286,6 +395,9 @@ class TripCoordinator(
 
     private companion object {
         const val TICK_MS = 30_000L
+        // 인식기가 바로 오류를 내도 쉬지 않고 다시 켜지 않게 잠깐 쉰다
+        const val STANDBY_RESTART_MS = 400L
+        const val STANDBY_WAIT_ENGINE_MS = 2_000L
         const val MAX_LOGS = 30
         val HH_MM: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     }

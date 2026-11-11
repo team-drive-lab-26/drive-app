@@ -20,12 +20,22 @@ import com.doran.app.navigation.DoranNavHost
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels { MainViewModel.Factory }
+    // 버튼을 눌러 권한을 물은 경우에만 허용 뒤 바로 듣는다
+    private var listenAfterPermission = false
     private val audioPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) viewModel.onListenClick() else viewModel.onMicPermissionDenied()
+        if (granted) {
+            viewModel.enableHandsFree()
+            if (listenAfterPermission) viewModel.onListenClick()
+        } else {
+            viewModel.onMicPermissionDenied()
+        }
+        listenAfterPermission = false
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // 처음 켤 때 마이크 권한을 받아 "도란아" 호출어 대기를 시작한다
+        if (hasMicPermission()) viewModel.enableHandsFree() else audioPermission.launch(Manifest.permission.RECORD_AUDIO)
         setContent {
             DoranTheme {
                 val ui by viewModel.uiState.collectAsStateWithLifecycle()
@@ -59,8 +69,15 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun onListenClick() {
-        val needsPermission = !viewModel.uiState.value.isListening &&
-            checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
-        if (needsPermission) audioPermission.launch(Manifest.permission.RECORD_AUDIO) else viewModel.onListenClick()
+        val needsPermission = !viewModel.uiState.value.isListening && !hasMicPermission()
+        if (needsPermission) {
+            listenAfterPermission = true
+            audioPermission.launch(Manifest.permission.RECORD_AUDIO)
+        } else {
+            viewModel.onListenClick()
+        }
     }
+
+    private fun hasMicPermission() =
+        checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
 }

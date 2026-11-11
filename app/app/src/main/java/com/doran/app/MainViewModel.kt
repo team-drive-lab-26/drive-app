@@ -27,8 +27,8 @@ data class MainUiState(
     val conversation: TripConversationState = TripConversationState(),
 ) {
     val isDriving: Boolean get() = vehicle.isDriving
-    val isListening: Boolean get() = voice.listenPhase == ListenPhase.LISTENING
-
+    // 호출어 대기 중에도 마이크는 켜져 있지만, 화면에는 호출됐을 때만 듣는 중으로 보인다
+    val isListening: Boolean get() = voice.listenPhase == ListenPhase.LISTENING && conversation.isAwake
     /** 듣는 동안에는 인식 중인 문장을, 아니면 도란의 마지막 말을 한 줄로 보여 준다 */
     val caption: String get() = if (isListening && voice.partial.isNotBlank()) voice.partial else conversation.caption
 }
@@ -56,6 +56,7 @@ class MainViewModel(
     }
 
     fun onMicPermissionDenied() = coordinator.onMicPermissionDenied()
+    fun enableHandsFree() = coordinator.enableHandsFree()
     fun submitUtterance(text: String) = coordinator.submitUtterance(text)
     fun sendDemoEvent(event: String) = coordinator.sendDemoEvent(event)
     fun startDemoRoute() = coordinator.startDemoRoute()

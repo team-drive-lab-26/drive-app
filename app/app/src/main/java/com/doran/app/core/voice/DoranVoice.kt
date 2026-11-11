@@ -2,6 +2,8 @@ package com.doran.app.core.voice
 
 import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -115,6 +117,13 @@ class DoranVoice(context: Context) {
         onSpoken = onDone
         _state.update { it.copy(isSpeaking = true) }
         return true
+    }
+
+    /** 호출을 알아들었다는 짧은 효과음 */
+    fun chime() {
+        val tone = runCatching { ToneGenerator(AudioManager.STREAM_NOTIFICATION, CHIME_VOLUME) }.getOrNull() ?: return
+        tone.startTone(ToneGenerator.TONE_PROP_ACK, CHIME_MS)
+        main.postDelayed({ tone.release() }, CHIME_MS + 100L)
     }
 
     fun stopSpeaking() {
@@ -335,5 +344,7 @@ class DoranVoice(context: Context) {
         const val SILENCE_TIMEOUT_MS = 8_000L
         const val LISTEN_TIMEOUT_MS = 15_000L
         const val FINAL_RESULT_GRACE_MS = 500L
+        const val CHIME_VOLUME = 80
+        const val CHIME_MS = 150
     }
 }
