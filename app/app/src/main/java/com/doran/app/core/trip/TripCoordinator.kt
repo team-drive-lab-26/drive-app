@@ -161,6 +161,13 @@ class TripCoordinator(
         scheduleStandby(delayMs = 0)
     }
 
+    /** 설정에서 "도란아" 대기를 끄면 버튼으로만 듣는다 */
+    fun disableHandsFree() {
+        handsFree = false
+        stopStandby()
+        log("호출어 대기 끔")
+    }
+
     /** 음성 캡슐 녹음처럼 마이크를 따로 쓰기 전에 부른다 */
     fun pauseStandby() {
         standbyPaused = true

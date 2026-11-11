@@ -61,9 +61,8 @@ shot 41_3D지도앨범 6
 adb shell input keyevent KEYCODE_BACK
 adb shell input keyevent KEYCODE_BACK
 
-for name in settings; do
-  go --es route "$name"
-  shot "2x_$name"
-  adb shell input keyevent KEYCODE_BACK
-done
+go --es route settings
+shot 50_설정 3
+adb shell input keyevent KEYCODE_BACK
+
 exit 0

@@ -94,7 +94,7 @@ fun DoranNavHost(ui: MainUiState, actions: DoranActions, onboarded: Boolean) {
                 onDismissCards = actions.onDismissCards,
             )
         }
-        composable<Route.Settings> { SettingsScreen() }
+        composable<Route.Settings> { SettingsScreen(onBack = { nav.popBackStack() }) }
         composable<Route.Record> {
             RecordScreen(onClose = { nav.popBackStack() })
         }

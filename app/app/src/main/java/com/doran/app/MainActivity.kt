@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
     private var listenAfterPermission = false
     private val audioPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) {
-            viewModel.enableHandsFree()
+            if (preferences.state.value.wakeWord) viewModel.enableHandsFree()
             if (listenAfterPermission) viewModel.onListenClick()
         } else {
             viewModel.onMicPermissionDenied()
@@ -113,7 +113,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startHandsFree() {
-        if (hasMicPermission()) viewModel.enableHandsFree() else audioPermission.launch(Manifest.permission.RECORD_AUDIO)
+        when {
+            !hasMicPermission() -> audioPermission.launch(Manifest.permission.RECORD_AUDIO)
+            preferences.state.value.wakeWord -> viewModel.enableHandsFree()
+        }
     }
 
     private fun onListenClick() {
