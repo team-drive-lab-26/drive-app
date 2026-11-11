@@ -21,6 +21,14 @@ class WakeWordTest {
     }
 
     @Test
+    fun acceptsCallWrittenAsPronounced() {
+        assertEquals(WakeMatch.CallOnly, WakeWord.match("도라나"))
+        assertEquals(WakeMatch.CallOnly, WakeWord.match("또래나"))
+        assertEquals(WakeMatch.Command("근처 휴게소 있어"), WakeWord.match("돌아나 근처 휴게소 있어"))
+        assertEquals(WakeMatch.None, WakeWord.match("돌아나가자"))
+    }
+
+    @Test
     fun keepsWordStartingLikeSuffix() {
         assertEquals(WakeMatch.Command("이거 틀어 줘"), WakeWord.match("도란 이거 틀어 줘"))
     }

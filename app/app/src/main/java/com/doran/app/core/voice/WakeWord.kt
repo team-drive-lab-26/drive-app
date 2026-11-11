@@ -24,8 +24,11 @@ object WakeWord {
     private const val MAX_LEADING_CHARS = 4
     private val SEPARATORS = Regex("^[\\s,.!?~·…]+")
 
+    // Pleos 음성 인식은 "도란아"를 소리 나는 대로 받아 적는다(에뮬레이터에서 확인). 뒤가 끝이거나 띄어 쓴 경우만 바꿔 "돌아나가자" 같은 말은 남긴다
+    private val SPOKEN_CALL = Regex("(도라나|돌아나|도라마|또래나|돌아다)(?=$|[\\s,.!?~·…])")
+
     fun match(text: String): WakeMatch {
-        val heard = text.trim()
+        val heard = text.trim().replace(SPOKEN_CALL, "도란아")
         val (start, name) = NAMES
             .mapNotNull { name -> heard.indexOf(name).takeIf { it >= 0 }?.let { it to name } }
             .minByOrNull { it.first } ?: return WakeMatch.None
