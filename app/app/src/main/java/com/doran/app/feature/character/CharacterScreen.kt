@@ -1,6 +1,5 @@
 package com.doran.app.feature.character
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -113,7 +112,8 @@ fun CharacterScreen(
             }
 
             val cardsLeft = headX + 170.dp
-            AnimatedVisibility(
+            // 바깥 Column의 ColumnScope 판을 피해 일반 판을 부른다
+            androidx.compose.animation.AnimatedVisibility(
                 visible = hasCards,
                 enter = fadeIn(tween(240, delayMillis = 200)) + slideInVertically(tween(420, delayMillis = 200)) { -it / 6 },
                 exit = fadeOut(tween(150)),
