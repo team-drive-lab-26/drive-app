@@ -14,8 +14,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -107,8 +109,11 @@ class AlbumViewModel(
     }
 }
 
+// SQLite는 시간대 없이 돌려줄 때가 있다. 서버는 UTC로 저장하므로 시간대가 없으면 UTC로 읽는다
 internal fun parseMillis(value: String): Long =
-    runCatching { OffsetDateTime.parse(value).toInstant().toEpochMilli() }.getOrDefault(0L)
+    runCatching { OffsetDateTime.parse(value).toInstant().toEpochMilli() }
+        .recoverCatching { LocalDateTime.parse(value).toInstant(ZoneOffset.UTC).toEpochMilli() }
+        .getOrDefault(0L)
 
 private fun formatDay(millis: Long): String =
     if (millis == 0L) "날짜 모름" else Instant.ofEpochMilli(millis).atZone(SEOUL).format(DAY)

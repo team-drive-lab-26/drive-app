@@ -28,6 +28,24 @@
 
 `type`은 `mention`, `stop`, `capsule` 중 하나입니다. `stop`·`capsule`에는 `id`만 필요합니다. 선택적으로 `latitude`·`longitude`(숫자)를 보내면 앨범 핀 위치로 저장합니다. 성공하면 `{"status":"ok"}`를 반환합니다. 이 API는 음성 파일을 업로드하지 않고 **기록 메타데이터만** 서버 DB(`trip_events`)에 저장합니다. 서버를 다시 켜도 같은 `session_id`의 기록이 남습니다. 저장 구조는 [docs/db](../db/README.md)를 따릅니다.
 
+`stop`의 `id`가 후보 목록(장소·휴게소)에 있으면 서버가 이름과 좌표를 채웁니다. 목록에 없는 곳은 `name`만 함께 보내면 이름이 남습니다. `capsule`의 `name`에는 남긴 사람을 넣습니다.
+
+## `GET /v1/trip/record`
+
+`session_id` 없이 부르면 여행 목록을 최근 순으로 돌려줍니다.
+
+```json
+{"status":"ok","trips":[{"session_id":"demo-1","region":"gangneung","started_at":"2026-11-11T10:00:00+09:00","ended_at":null,"event_count":5}]}
+```
+
+`?session_id=demo-1`을 붙이면 그 여행의 기록과 앨범 지도에 그릴 경로(`[위도, 경도]` 최대 약 120개)를 돌려줍니다.
+
+```json
+{"status":"ok","session_id":"demo-1","events":[{"type":"stop","id":"rest-1","name":"횡성 휴게소","category":"rest_stop","latitude":37.5,"longitude":128.1,"recorded_at":"..."}],"route":[[37.566,126.977],[37.795,128.918]]}
+```
+
+정차 중 응답의 `cards`에는 `kind`(`place`/`rest_stop`), `category`, `address`, `summary`(한 줄 설명), `image_url`, `distance_km`가 붙습니다. 곡 카드는 `track_id`, `name`, `artist`, `tags`를 줍니다.
+
 `GET /health`는 서버 동작 상태를 알려 줍니다. 잘못된 요청은 HTTP 400과 `{"error":"invalid_request"}`, 없는 경로는 404를 반환합니다. 서버가 닿지 않으면 앱은 연결 실패 자막을 보여 줍니다.
 
 ## Android 시연 연결
