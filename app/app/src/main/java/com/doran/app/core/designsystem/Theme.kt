@@ -73,8 +73,8 @@ object DoranText {
     val countdown = TextStyle(fontFamily = Suit, fontSize = 112.sp, lineHeight = 112.sp, fontWeight = FontWeight.ExtraBold, fontFeatureSettings = TABULAR, letterSpacing = (-2).sp)
 
     /** 길가 표지판 이름. 거리에 따라 크기를 줄여 쓴다 */
-    val sign = TextStyle(fontFamily = Suit, fontSize = 20.sp, lineHeight = 24.sp, fontWeight = FontWeight.Bold)
-    val signSub = TextStyle(fontFamily = Suit, fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium, fontFeatureSettings = TABULAR)
+    val sign = TextStyle(fontFamily = Suit, fontSize = 27.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold)
+    val signSub = TextStyle(fontFamily = Suit, fontSize = 20.sp, lineHeight = 24.sp, fontWeight = FontWeight.Medium, fontFeatureSettings = TABULAR)
 }
 
 private val DoranColors = darkColorScheme(

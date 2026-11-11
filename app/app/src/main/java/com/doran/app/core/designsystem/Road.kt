@@ -38,17 +38,17 @@ data class RoadSign(
 )
 
 /** 거리(km)를 도로 깊이로. 가까운 곳은 넓게, 먼 곳은 지평선 쪽으로 몰린다 */
-fun depthForKm(km: Double): Float = (km / (km + 40.0)).toFloat().coerceIn(0.04f, 0.95f)
+fun depthForKm(km: Double): Float = (km / (km + 80.0)).toFloat().coerceIn(0.04f, 0.92f)
 
 /** 원근 도로의 모양. 화면 크기(px)와 지평선 높이로 정한다 */
 private class RoadGeometry(val width: Float, val height: Float, horizonFraction: Float) {
     val horizon = height * horizonFraction
     val bottom = height
     val vx = width / 2f
-    val bottomHalf = width * 0.26f
+    val bottomHalf = width * 0.34f
     val topHalf = width * 0.018f
 
-    private fun s(depth: Float): Float = 1f / (1f + depth * 9f)
+    private fun s(depth: Float): Float = 1f / (1f + depth * 5f)
 
     /** 그 깊이의 길바닥 높이 */
     fun groundY(depth: Float): Float = horizon + (bottom - horizon) * s(depth)
@@ -56,7 +56,7 @@ private class RoadGeometry(val width: Float, val height: Float, horizonFraction:
     fun halfWidth(y: Float): Float = topHalf + (bottomHalf - topHalf) * ((y - horizon) / (bottom - horizon)).coerceIn(0f, 1f)
 
     /** 표지판 크기 비율. 너무 작아지지 않게 바닥을 둔다 */
-    fun scale(depth: Float): Float = 0.42f + 0.58f * s(depth)
+    fun scale(depth: Float): Float = 0.55f + 0.45f * s(depth)
 
     fun poleX(sign: RoadSign, margin: Float): Float {
         val y = groundY(sign.depth)
@@ -77,7 +77,7 @@ private fun SignPlate(sign: RoadSign) {
         Modifier
             .background(bg, shape)
             .border(1.dp, if (sign.hot) DoranPalette.Accent else DoranPalette.LineStrong, shape)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 20.dp, vertical = 12.dp),
     ) {
         Text(sign.title, style = DoranText.sign, color = if (sign.hot) DoranPalette.OnAccent else DoranPalette.Ink, maxLines = 1)
         if (sign.sub.isNotBlank()) {

@@ -75,7 +75,7 @@ fun CharacterScreen(
             .fillMaxSize()
             .background(DoranPalette.Background),
     ) {
-        RoadScene(signs = signs, horizon = 0.42f, orbSize = orb) {
+        RoadScene(signs = signs, horizon = 0.40f, orbSize = orb) {
             TappableDoran(face = face, onCall = onCall, onLongPress = onLongPress, modifier = Modifier.fillMaxSize())
         }
         TopBar(
@@ -90,9 +90,8 @@ fun CharacterScreen(
             maxLines = 3,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 48.dp, bottom = 48.dp)
-                .width(400.dp),
+                .padding(start = 48.dp, top = 116.dp)
+                .width(if (shown.isEmpty()) 720.dp else 420.dp),
         )
         AnimatedVisibility(
             visible = shown.isNotEmpty(),
