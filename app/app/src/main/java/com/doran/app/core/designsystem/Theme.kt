@@ -25,6 +25,9 @@ object DoranPalette {
     val Body = Color(0xFFFF7A32)
     val BodyShade = Color(0xFFC9531C)
     val Eye = Color(0xFF1C1B1A)
+    val Stem = Color(0xFF4F6B2E)
+    val Leaf = Color(0xFF4E8A3A)
+    val LeafLight = Color(0xFF7DB25A)
 }
 
 private val DoranColors = lightColorScheme(

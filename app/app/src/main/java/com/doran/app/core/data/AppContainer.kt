@@ -19,6 +19,7 @@ class AppContainer(context: Context) {
     // SDK 콜백과 상태 갱신이 메인 스레드 기준이라 Main.immediate를 쓴다. 네트워크는 Retrofit이 따로 처리한다
     val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
+    val preferences = AppPreferences(appContext)
     val agentRepository = AgentRepository(BuildConfig.AGENT_BASE_URL)
     val vehicleStateSource: VehicleStateSource = PleosVehicleStateSource(appContext)
     val navi = PleosNavi(appContext)

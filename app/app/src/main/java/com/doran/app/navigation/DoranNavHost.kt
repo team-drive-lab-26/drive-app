@@ -21,6 +21,7 @@ import com.doran.app.feature.settings.SettingsScreen
 /** 화면에서 부르는 동작. MainActivity가 채운다 */
 class DoranActions(
     val onCall: () -> Unit,
+    val onOnboardingDone: () -> Unit,
     val onToggleDebug: () -> Unit,
     val onRouteHandled: () -> Unit,
 )
@@ -29,7 +30,7 @@ val MainUiState.face: DoranFace
     get() = DoranFace(mood = mood, level = voice.level, cheerKey = conversation.cheerAt)
 
 @Composable
-fun DoranNavHost(ui: MainUiState, actions: DoranActions) {
+fun DoranNavHost(ui: MainUiState, actions: DoranActions, onboarded: Boolean) {
     val nav = rememberNavController()
     val isDriving = ui.isDriving
 
@@ -48,11 +49,12 @@ fun DoranNavHost(ui: MainUiState, actions: DoranActions) {
         actions.onRouteHandled()
     }
 
-    NavHost(navController = nav, startDestination = Route.Onboarding) {
+    NavHost(navController = nav, startDestination = if (onboarded) Route.Character else Route.Onboarding) {
         composable<Route.Onboarding> {
             OnboardingScreen(
                 onDone = {
-                    nav.navigate(Route.Album) {
+                    actions.onOnboardingDone()
+                    nav.navigate(Route.Character) {
                         popUpTo<Route.Onboarding> { inclusive = true }
                     }
                 },

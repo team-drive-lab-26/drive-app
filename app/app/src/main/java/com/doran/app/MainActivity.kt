@@ -39,14 +39,21 @@ class MainActivity : ComponentActivity() {
         listenAfterPermission = false
     }
 
+    private val preferences get() = (application as DoranApplication).container.preferences
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // 처음 켤 때 마이크 권한을 받아 "도란아" 호출어 대기를 시작한다
-        if (hasMicPermission()) viewModel.enableHandsFree() else audioPermission.launch(Manifest.permission.RECORD_AUDIO)
         handleDebugIntent(intent)
+        // 처음 설정에서 동의한 뒤에만 마이크 권한을 묻는다. 권한이 있으면 "도란아" 대기를 시작한다
+        if (preferences.state.value.onboarded) startHandsFree()
+        val onboarded = preferences.state.value.onboarded
 
         val actions = DoranActions(
             onCall = ::onListenClick,
+            onOnboardingDone = {
+                preferences.update { it.copy(onboarded = true) }
+                startHandsFree()
+            },
             onToggleDebug = { if (BuildConfig.DEBUG) viewModel.toggleDebug() },
             onRouteHandled = viewModel::onRouteHandled,
         )
@@ -55,7 +62,7 @@ class MainActivity : ComponentActivity() {
                 val ui by viewModel.uiState.collectAsStateWithLifecycle()
                 Column(Modifier.fillMaxSize().background(DoranPalette.Background)) {
                     Box(Modifier.weight(1f)) {
-                        DoranNavHost(ui = ui, actions = actions)
+                        DoranNavHost(ui = ui, actions = actions, onboarded = onboarded)
                     }
                     // 디버그 빌드에서도 평소에는 숨긴다. 도란을 길게 누르면 열린다
                     if (BuildConfig.DEBUG && ui.local.showDebug) {
@@ -89,6 +96,7 @@ class MainActivity : ComponentActivity() {
      */
     private fun handleDebugIntent(intent: Intent?) {
         if (!BuildConfig.DEBUG || intent == null) return
+        intent.getStringExtra("onboarded")?.let { value -> preferences.update { it.copy(onboarded = value == "yes") } }
         intent.getStringExtra("gear")?.let { name -> runCatching { Gear.valueOf(name) }.getOrNull()?.let(viewModel::overrideGear) }
         intent.getStringExtra("door")?.let { viewModel.overrideDoorOpen(it == "open") }
         intent.getStringExtra("route")?.let(viewModel::requestRoute)
@@ -98,6 +106,10 @@ class MainActivity : ComponentActivity() {
         intent.getStringExtra("debug")?.let { viewModel.setDebugVisible(it == "on") }
         intent.getStringExtra("say")?.let(viewModel::submitUtterance)
         intent.getStringExtra("event")?.let(viewModel::sendDemoEvent)
+    }
+
+    private fun startHandsFree() {
+        if (hasMicPermission()) viewModel.enableHandsFree() else audioPermission.launch(Manifest.permission.RECORD_AUDIO)
     }
 
     private fun onListenClick() {

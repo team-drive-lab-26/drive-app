@@ -126,6 +126,31 @@ private fun DrawScope.drawDoran(
     )
 
     rotate(degrees = tilt, pivot = Offset(cx, ground)) {
+        // 꼭지와 잎. 귤처럼 머리에 달려 있고 천천히 흔들린다. 기쁠 때는 더 흔들린다
+        val sway = (if (mood == DoranMood.HAPPY) 14f else 5f) * sin(t * (if (mood == DoranMood.HAPPY) 9f else 1.4f))
+        val stemBase = Offset(cx + r * 0.04f, top + r * 0.04f)
+        rotate(degrees = sway, pivot = stemBase) {
+            drawLine(
+                DoranPalette.Stem,
+                start = stemBase,
+                end = Offset(stemBase.x + r * 0.03f, stemBase.y - r * 0.16f),
+                strokeWidth = r * 0.06f,
+                cap = StrokeCap.Round,
+            )
+            rotate(degrees = -28f, pivot = Offset(stemBase.x + r * 0.03f, stemBase.y - r * 0.12f)) {
+                drawOval(
+                    brush = Brush.linearGradient(
+                        0f to DoranPalette.LeafLight,
+                        1f to DoranPalette.Leaf,
+                        start = Offset(stemBase.x, stemBase.y - r * 0.3f),
+                        end = Offset(stemBase.x + r * 0.4f, stemBase.y),
+                    ),
+                    topLeft = Offset(stemBase.x + r * 0.03f, stemBase.y - r * 0.2f),
+                    size = Size(r * 0.4f, r * 0.17f),
+                )
+            }
+        }
+
         // 몸. 왼쪽 위에서 빛을 받는 무광 공
         drawOval(
             brush = Brush.radialGradient(
