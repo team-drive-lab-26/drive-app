@@ -8,6 +8,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -118,13 +119,13 @@ private fun JCard(tracks: List<AgentCard>, nowPlaying: String?, onPlay: (AgentCa
         }
         tracks.forEachIndexed { index, track ->
             if (index > 0) Rule(Modifier.padding(horizontal = 28.dp), DoranPalette.LineOnPaper)
-            TrackRow("A${index + 1}", track, playing = track.trackId == nowPlaying, onPlay = { onPlay(track) })
+            TrackRow("A${index + 1}", track, playing = track.trackId == nowPlaying, first = index == 0, onPlay = { onPlay(track) })
         }
     }
 }
 
 @Composable
-private fun TrackRow(number: String, track: AgentCard, playing: Boolean, onPlay: () -> Unit) {
+private fun TrackRow(number: String, track: AgentCard, playing: Boolean, first: Boolean, onPlay: () -> Unit) {
     val ink = if (playing) DoranPalette.TapeText else DoranPalette.Ink
     val soft = if (playing) DoranPalette.TapeTextSoft else DoranPalette.InkSoft
     Row(
@@ -143,7 +144,7 @@ private fun TrackRow(number: String, track: AgentCard, playing: Boolean, onPlay:
             Text(track.name, style = MaterialTheme.typography.headlineMedium, color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val moods = track.tags.mapNotNull(MOOD_NAMES::get).joinToString(", ")
             Text(
-                listOf(track.artist, if (moods.isBlank()) "" else "$moods 분위기").filter(String::isNotBlank).joinToString(" · "),
+                listOf(if ("더미" in track.artist) "시연용 곡" else track.artist, if (moods.isBlank()) "" else "$moods 분위기").filter(String::isNotBlank).joinToString(" · "),
                 style = MaterialTheme.typography.bodyMedium,
                 color = soft,
                 maxLines = 1,
@@ -161,11 +162,12 @@ private fun TrackRow(number: String, track: AgentCard, playing: Boolean, onPlay:
                 Modifier
                     .heightIn(min = 64.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(DoranPalette.Ink)
+                    .background(if (first) DoranPalette.Ink else Color.Transparent)
+                    .border(2.dp, DoranPalette.Ink, RoundedCornerShape(14.dp))
                     .padding(horizontal = 28.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("틀기", style = MaterialTheme.typography.labelLarge, color = DoranPalette.Surface, modifier = Modifier.padding(vertical = 20.dp))
+                Text("틀기", style = MaterialTheme.typography.labelLarge, color = if (first) DoranPalette.Surface else DoranPalette.Ink, modifier = Modifier.padding(vertical = 20.dp))
             }
         }
     }

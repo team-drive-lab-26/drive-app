@@ -9,6 +9,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.unit.sp
 import com.doran.app.R
 
@@ -75,6 +76,9 @@ val PenHand = FontFamily(Font(R.font.nanum_pen, FontWeight.Normal))
 
 private const val TABULAR = "tnum"
 
+// 한글이 글자 단위로 끊겨 한 글자만 다음 줄에 남지 않게 어절 단위로 끊는다
+private val Phrase = LineBreak(LineBreak.Strategy.Balanced, LineBreak.Strictness.Strict, LineBreak.WordBreak.Phrase)
+
 object DoranText {
     /** 테이프 라벨 손글씨 */
     val label = TextStyle(fontFamily = PenHand, fontSize = 30.sp, lineHeight = 32.sp)
@@ -102,13 +106,13 @@ private val DoranColors = lightColorScheme(
 
 // 주행 자막 34sp 이상, 본문 18sp 이상. 운전 중 한 번에 읽히는 크기
 private val DoranType = Typography(
-    displayMedium = TextStyle(fontFamily = Suit, fontSize = 38.sp, lineHeight = 48.sp, fontWeight = FontWeight.SemiBold),
-    headlineLarge = TextStyle(fontFamily = Suit, fontSize = 40.sp, lineHeight = 48.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.5).sp),
-    headlineMedium = TextStyle(fontFamily = Suit, fontSize = 30.sp, lineHeight = 38.sp, fontWeight = FontWeight.ExtraBold),
+    displayMedium = TextStyle(fontFamily = Suit, fontSize = 38.sp, lineHeight = 48.sp, fontWeight = FontWeight.SemiBold, lineBreak = Phrase),
+    headlineLarge = TextStyle(fontFamily = Suit, fontSize = 40.sp, lineHeight = 48.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.5).sp, lineBreak = Phrase),
+    headlineMedium = TextStyle(fontFamily = Suit, fontSize = 30.sp, lineHeight = 38.sp, fontWeight = FontWeight.ExtraBold, lineBreak = Phrase),
     titleLarge = TextStyle(fontFamily = Suit, fontSize = 24.sp, lineHeight = 32.sp, fontWeight = FontWeight.SemiBold),
     titleMedium = TextStyle(fontFamily = Suit, fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.SemiBold),
-    bodyLarge = TextStyle(fontFamily = Suit, fontSize = 20.sp, lineHeight = 30.sp),
-    bodyMedium = TextStyle(fontFamily = Suit, fontSize = 18.sp, lineHeight = 26.sp),
+    bodyLarge = TextStyle(fontFamily = Suit, fontSize = 20.sp, lineHeight = 30.sp, lineBreak = Phrase),
+    bodyMedium = TextStyle(fontFamily = Suit, fontSize = 18.sp, lineHeight = 26.sp, lineBreak = Phrase),
     labelLarge = TextStyle(fontFamily = Suit, fontSize = 20.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold),
 )
 

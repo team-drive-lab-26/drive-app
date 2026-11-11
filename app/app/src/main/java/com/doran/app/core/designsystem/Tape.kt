@@ -352,7 +352,7 @@ fun TapeSwatch(color: Color, modifier: Modifier = Modifier) {
 private val HHMM = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
 
 fun clockText(millis: Long): String =
-    java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneId.systemDefault()).format(HHMM)
+    java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneId.of("Asia/Seoul")).format(HHMM)
 
 fun com.doran.app.core.model.TapeMark.toEntry(): TapeEntry =
     TapeEntry(id = id, kind = kind, title = label, time = clockText(atMillis), seconds = seconds, atMillis = atMillis)

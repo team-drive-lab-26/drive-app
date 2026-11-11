@@ -298,16 +298,15 @@ class TripCoordinator(
         _state.update {
             it.copy(
                 tape = listOf(
-                    TapeMark("demo-start", TapeKind.START, "출발", ago(118)),
-                    TapeMark("demo-stop-1", TapeKind.STOP, "하남드림 휴게소", ago(96)),
-                    TapeMark("demo-voice-1", TapeKind.VOICE, "아이", ago(92), seconds = 12),
-                    TapeMark("demo-voice-2", TapeKind.VOICE, "엄마", ago(90), seconds = 8),
-                    TapeMark("demo-stop-2", TapeKind.STOP, "횡성휴게소", ago(31)),
-                    TapeMark("demo-voice-3", TapeKind.VOICE, "아빠", ago(28), seconds = 15),
+                    TapeMark("demo-start", TapeKind.START, "서울시청 출발", ago(62)),
+                    TapeMark("demo-voice-0", TapeKind.VOICE, "아빠", ago(61), seconds = 6),
+                    TapeMark("demo-stop-1", TapeKind.STOP, "광장시장", ago(44)),
+                    TapeMark("demo-voice-1", TapeKind.VOICE, "아이", ago(30), seconds = 12),
+                    TapeMark("demo-voice-2", TapeKind.VOICE, "엄마", ago(28), seconds = 8),
                 ),
-                lastPlaceName = "횡성휴게소",
+                lastPlaceName = "광장시장",
                 demoDestination = "강릉역",
-                demoEtaMinutes = 52,
+                demoEtaMinutes = 158,
             )
         }
     }

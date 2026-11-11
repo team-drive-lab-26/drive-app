@@ -49,7 +49,7 @@ fun DrivingScreen(
     ) {
         val band = 176.dp
         val bandTop = maxHeight * 0.54f
-        val doran = minOf(maxHeight * 0.42f, 340.dp)
+        val doran = minOf(maxHeight * 0.26f, 200.dp)
         if (routeLine.isNotBlank()) {
             Text(
                 text = routeLine,
@@ -83,7 +83,7 @@ fun DrivingScreen(
             }
         }
         Box(Modifier.offset(x = 40.dp, y = bandTop - doranFeetOffset(doran))) {
-            TappableDoran(face = face, onCall = onCall, onLongPress = onLongPress, modifier = Modifier.size(doran))
+            TappableDoran(face = face, onCall = onCall, onLongPress = onLongPress, still = true, modifier = Modifier.size(doran))
         }
     }
 }

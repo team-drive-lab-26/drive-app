@@ -35,6 +35,7 @@ import com.doran.app.core.data.AgentCard
 import com.doran.app.core.designsystem.CALL_HINT
 import com.doran.app.core.designsystem.DoranFace
 import com.doran.app.core.designsystem.DoranPalette
+import com.doran.app.core.designsystem.DoranText
 import com.doran.app.core.designsystem.SuggestionCard
 import com.doran.app.core.designsystem.TapeEntry
 import com.doran.app.core.designsystem.TapeStrip
@@ -81,8 +82,8 @@ fun CharacterScreen(
             val hasCards = cards.isNotEmpty()
             val band = 156.dp
             val bandTop = maxHeight - band - 44.dp - 36.dp
-            val playhead by animateFloatAsState(if (hasCards) 0.27f else 0.52f, tween(520), label = "playhead")
-            val doran by animateDpAsState(if (hasCards) minOf(bandTop * 0.55f, 250.dp) else minOf(bandTop * 0.92f, 420.dp), tween(520), label = "doran")
+            val playhead by animateFloatAsState(if (hasCards) 0.30f else 0.40f, tween(520), label = "playhead")
+            val doran by animateDpAsState(if (hasCards) minOf(bandTop * 0.55f, 240.dp) else minOf(bandTop * 0.7f, 300.dp), tween(520), label = "doran")
             val headX = maxWidth * playhead
 
             // 도란의 말. 화면의 제목처럼 맨 위에 둔다
@@ -123,23 +124,37 @@ fun CharacterScreen(
                 val cardHeight = 196.dp
                 val stack = cardHeight * shown.size + 16.dp * (shown.size - 1).coerceAtLeast(0)
                 Box(Modifier.width(maxWidth - cardsLeft - 40.dp).height(bandTop)) {
-                    // 카드에서 빈 테이프로 내려가는 점선과 끼울 자리
+                    // 카드마다 빈 테이프에 끼울 칸 하나와 내려가는 점선. 칸에는 그곳 이름을 펜으로 적는다
+                    val slot = 168.dp
                     Canvas(Modifier.fillMaxSize()) {
-                        val x = 36.dp.toPx()
-                        val from = (bandTop - 28.dp).toPx()
-                        drawLine(
-                            DoranPalette.Head,
-                            Offset(x, from),
-                            Offset(x, size.height + 18.dp.toPx()),
-                            strokeWidth = 3.dp.toPx(),
-                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(8.dp.toPx(), 8.dp.toPx())),
-                        )
-                        drawRoundRect(
-                            DoranPalette.Head,
-                            topLeft = Offset(x - 12.dp.toPx(), size.height + 18.dp.toPx()),
-                            size = Size(150.dp.toPx(), band.toPx() - 36.dp.toPx()),
-                            cornerRadius = CornerRadius(10.dp.toPx()),
-                            style = Stroke(width = 3.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 8.dp.toPx()))),
+                        shown.indices.forEach { i ->
+                            val x = (24.dp + slot * i + 24.dp).toPx()
+                            drawLine(
+                                DoranPalette.Head,
+                                Offset(x, (bandTop - 28.dp).toPx()),
+                                Offset(x, size.height + 16.dp.toPx()),
+                                strokeWidth = 3.dp.toPx(),
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(8.dp.toPx(), 8.dp.toPx())),
+                            )
+                            drawRoundRect(
+                                DoranPalette.Head,
+                                topLeft = Offset((24.dp + slot * i).toPx(), size.height + 16.dp.toPx()),
+                                size = Size((slot - 16.dp).toPx(), band.toPx() - 32.dp.toPx()),
+                                cornerRadius = CornerRadius(10.dp.toPx()),
+                                style = Stroke(width = 3.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 8.dp.toPx()))),
+                            )
+                        }
+                    }
+                    shown.forEachIndexed { i, card ->
+                        Text(
+                            card.name,
+                            style = DoranText.labelSmall,
+                            color = DoranPalette.Head,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .offset(x = 24.dp + slot * i + 14.dp, y = bandTop + 30.dp)
+                                .width(slot - 44.dp),
                         )
                     }
                     Column(

@@ -41,6 +41,7 @@ fun DoranCharacter(
     modifier: Modifier = Modifier,
     level: Float = 0f,
     cheerKey: Long = 0L,
+    still: Boolean = false,
 ) {
     val time by produceState(0f) {
         val start = withFrameNanos { it }
@@ -59,8 +60,10 @@ fun DoranCharacter(
     val lean by animateFloatAsState(if (shown == DoranMood.LISTENING) 1f else 0f, soft, label = "lean")
     val eyeScale by animateFloatAsState(if (shown == DoranMood.LISTENING) 1.18f else 1f, soft, label = "eye")
     val voice by animateFloatAsState(level.coerceIn(0f, 1f), tween(90), label = "level")
-    val gazeX by animateFloatAsState(gazeX(shown, time), soft, label = "gazeX")
-    val gazeY by animateFloatAsState(gazeY(shown, time), soft, label = "gazeY")
+    // 주행 중에는 시선이 시간 따라 흘러다니지 않고 상태가 바뀔 때만 움직인다
+    val gazeTime = if (still) 0f else time
+    val gazeX by animateFloatAsState(gazeX(shown, gazeTime), soft, label = "gazeX")
+    val gazeY by animateFloatAsState(gazeY(shown, gazeTime), soft, label = "gazeY")
 
     Canvas(modifier) {
         drawDoran(shown, time, lean, eyeScale, voice, gazeX, gazeY)

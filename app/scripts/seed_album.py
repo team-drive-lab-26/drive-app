@@ -18,9 +18,12 @@ def post(body: dict) -> None:
 
 rest_stops = [r for r in json.loads((ROOT / "ai/data/gangneung/rest_stops.json").read_text(encoding="utf-8")) if r.get("along_route")]
 places = [p for p in json.loads((ROOT / "ai/data/gangneung/places.json").read_text(encoding="utf-8")) if p.get("along_route")]
-post({"type": "stop", "id": rest_stops[2]["id"]})
+by_name = {r["name"]: r for r in rest_stops}
+hanam = next(r for n, r in by_name.items() if "하남" in n)
+hoengseong = next(r for n, r in by_name.items() if "횡성" in n)
+post({"type": "stop", "id": hanam["id"]})
 post({"type": "capsule", "id": "cap-demo-1", "name": "엄마"})
-post({"type": "stop", "id": rest_stops[-2]["id"]})
+post({"type": "stop", "id": hoengseong["id"]})
 post({"type": "stop", "id": places[0]["id"]})
 post({"type": "capsule", "id": "cap-demo-2", "name": "아이"})
 print("seeded", SESSION)

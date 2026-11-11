@@ -133,7 +133,7 @@ fun AlbumMapScreen(onBack: () -> Unit, viewModel: AlbumMapViewModel = viewModel(
                         text,
                         TextStyle(fontFamily = Suit, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = DoranPalette.InkSoft),
                     )
-                    drawText(label, topLeft = Offset(p.x - label.size.width / 2f, p.y + 14f))
+                    drawText(label, topLeft = Offset(p.x - label.size.width / 2f, p.y + 34f))
                 }
             }
 
@@ -283,7 +283,7 @@ private fun DrawScope.drawGround(projection: MapProjection, tilt: Float) {
         corners.drop(1).forEach { lineTo(it.x, it.y) }
         close()
     }
-    drawPath(path, DoranPalette.Surface)
+    drawPath(path, Color(0xFFEAF3F8))
     drawPath(path, DoranPalette.Line, style = Stroke(width = 3f))
 }
 

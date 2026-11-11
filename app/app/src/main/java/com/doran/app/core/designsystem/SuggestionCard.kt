@@ -18,7 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.border
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -60,9 +60,9 @@ fun SuggestionCard(
     Row(
         modifier
             .fillMaxWidth()
-            .shadow(10.dp, CardShape, ambientColor = DoranPalette.Ink, spotColor = DoranPalette.Ink)
             .clip(CardShape)
-            .background(DoranPalette.Surface),
+            .background(DoranPalette.Surface)
+            .border(2.dp, DoranPalette.Ink, CardShape),
     ) {
         if (card.imageUrl.isNotBlank()) {
             AsyncImage(
@@ -79,8 +79,6 @@ fun SuggestionCard(
                 .padding(horizontal = 24.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.Center,
         ) {
-            Text(card.headline(), style = MaterialTheme.typography.bodyMedium, color = DoranPalette.InkSoft, maxLines = 1)
-            Spacer(Modifier.height(4.dp))
             Text(
                 card.name,
                 style = MaterialTheme.typography.headlineMedium,
@@ -88,8 +86,9 @@ fun SuggestionCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            Spacer(Modifier.height(6.dp))
+            Text(card.headline(), style = MaterialTheme.typography.bodyMedium, color = DoranPalette.Ink, maxLines = 1)
             if (card.summary.isNotBlank()) {
-                Spacer(Modifier.height(6.dp))
                 Text(
                     card.summary,
                     style = MaterialTheme.typography.bodyMedium,

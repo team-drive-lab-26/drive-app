@@ -36,13 +36,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
-/** 누르면 듣고, 길게 누르면 디버그 패널을 여는 도란 */
+/** 누르면 듣고, 길게 누르면 디버그 패널을 여는 도란. 주행 중에는 [still]로 혼자 두리번거리지 않게 한다 */
 @Composable
-fun TappableDoran(face: DoranFace, onCall: () -> Unit, modifier: Modifier = Modifier, onLongPress: () -> Unit = {}) {
+fun TappableDoran(face: DoranFace, onCall: () -> Unit, modifier: Modifier = Modifier, onLongPress: () -> Unit = {}, still: Boolean = false) {
     DoranCharacter(
         mood = face.mood,
         level = face.level,
         cheerKey = face.cheerKey,
+        still = still,
         modifier = modifier
             .semantics { contentDescription = "도란. 누르면 말을 들어요" }
             .pointerInput(onCall, onLongPress) {
