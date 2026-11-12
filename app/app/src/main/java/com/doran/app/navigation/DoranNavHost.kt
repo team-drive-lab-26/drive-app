@@ -6,6 +6,11 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -48,22 +53,29 @@ fun DoranNavHost(ui: MainUiState, actions: DoranActions, onboarded: Boolean) {
     val nav = rememberNavController()
     val isDriving = ui.isDriving
 
+    // 주행 중에는 주행 화면이 늘 맨 위에 있게 한다. 그 사이 들어온 화면 이동은 정차한 뒤에 처리하므로,
+    // 정차로 바뀔 때는 맨 위의 주행 화면 하나만 걷으면 된다(그 밑의 정차 화면까지 같이 닫히지 않는다)
     LaunchedEffect(isDriving) {
         if (isDriving) {
             nav.navigate(Route.Driving) { launchSingleTop = true }
-        } else {
-            nav.popBackStack<Route.Driving>(inclusive = true)
+        } else if (nav.currentBackStackEntry?.destination?.hasRoute<Route.Driving>() == true) {
+            nav.popBackStack()
         }
     }
 
-    // "한마디 남길래?"에 답하면 녹음 화면을 연다. 주행 중에는 열지 않는다
-    LaunchedEffect(ui.conversation.recordRequestAt) {
-        if (ui.conversation.recordRequestAt != 0L && !ui.isDriving) nav.navigate(Route.Record) { launchSingleTop = true }
+    // "한마디 남길래?"에 답하면 녹음 화면을 연다. 주행 중에 온 요청은 정차하면 연다
+    var handledRecordAt by rememberSaveable { mutableLongStateOf(0L) }
+    LaunchedEffect(ui.conversation.recordRequestAt, isDriving) {
+        val at = ui.conversation.recordRequestAt
+        if (at == 0L || at == handledRecordAt || isDriving) return@LaunchedEffect
+        handledRecordAt = at
+        nav.navigate(Route.Record) { launchSingleTop = true }
     }
 
-    // 시연 촬영과 디버그용. 바깥에서 화면 이름으로 이동을 요청한다
-    LaunchedEffect(ui.local.requestedRoute) {
+    // 시연 촬영과 디버그용. 바깥에서 화면 이름으로 이동을 요청한다. 주행 중에는 정차할 때까지 미룬다
+    LaunchedEffect(ui.local.requestedRoute, isDriving) {
         val route = ui.local.requestedRoute ?: return@LaunchedEffect
+        if (isDriving) return@LaunchedEffect
         Route.byName(route, actions.currentSessionId)?.let { nav.navigate(it) { launchSingleTop = true } }
         actions.onRouteHandled()
     }
