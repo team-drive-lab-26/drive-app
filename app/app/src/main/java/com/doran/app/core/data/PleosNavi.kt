@@ -49,7 +49,8 @@ class PleosNavi(context: Context) {
     val errors: SharedFlow<NaviErrorCode> = _errors.asSharedFlow()
 
     private var connecting = false
-    private val pending = mutableListOf<() -> Unit>()
+    // 연결되면 실행할 요청과, 연결에 실패하면 알릴 곳
+    private val pending = mutableListOf<Pair<() -> Unit, () -> Unit>>()
 
     private val listener = object : NaviHelperEventListener {
         override fun onRouteStarted(info: RouteStartInfo) {
@@ -109,18 +110,20 @@ class PleosNavi(context: Context) {
                     helper.addListener(listener)
                     _state.update { it.copy(isConnected = true) }
                     refresh()
-                    val queued = synchronized(pending) { pending.toList().also { pending.clear() } }
-                    queued.forEach { it() }
+                    takePending().forEach { it.first() }
                 },
                 onFailed = {
                     connecting = false
-                    synchronized(pending) { pending.clear() }
+                    takePending().forEach { it.second() }
                 },
             )
         } catch (_: Exception) {
             connecting = false
+            takePending().forEach { it.second() }
         }
     }
+
+    private fun takePending() = synchronized(pending) { pending.toList().also { pending.clear() } }
 
     /** 남은 시간은 이벤트로 오지 않을 수도 있어 주기적으로 다시 묻는다 */
     fun refresh() {
@@ -154,7 +157,7 @@ class PleosNavi(context: Context) {
         }
         when {
             _state.value.isConnected -> submit()
-            connecting -> synchronized(pending) { pending += submit }
+            connecting -> synchronized(pending) { pending += submit to { onResult(NaviCommandResult.NotConnected) } }
             else -> onResult(NaviCommandResult.NotConnected)
         }
     }

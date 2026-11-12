@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.doran.app.core.data.AgentCard
+import com.doran.app.core.model.PlaceText
 
 private val CATEGORY_NAMES = mapOf(
     "attraction" to "관광지",
@@ -115,10 +116,11 @@ fun SuggestionCard(
                     Text(card.headline(), style = MaterialTheme.typography.titleMedium, color = DoranPalette.InkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
-            if (card.summary.isNotBlank() && !compact) {
+            val detail = PlaceText.summary(card.summary)
+            if (detail.isNotBlank() && !compact) {
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    card.summary,
+                    detail,
                     style = MaterialTheme.typography.bodyMedium,
                     color = DoranPalette.InkSoft,
                     maxLines = 2,

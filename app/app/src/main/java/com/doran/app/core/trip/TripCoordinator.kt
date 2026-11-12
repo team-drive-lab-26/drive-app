@@ -97,6 +97,7 @@ class TripCoordinator(
 
     // 내비는 장소 ID를 모르므로, 우리가 추가한 경유지 이름으로 서버 장소 ID를 찾는다
     private val waypointIds = mutableMapOf<String, String>()
+    private var lastWaypointName = ""
     private var pendingTrackId: String? = null
     private var started = false
 
@@ -332,7 +333,8 @@ class TripCoordinator(
      * 이름이 비면 지금 넣어 둔 경유지로 친다.
      */
     fun debugArrive(name: String) {
-        val place = name.ifBlank { _state.value.detour }.ifBlank { return }
+        // 내비가 없는 에뮬레이터에서는 경유지가 들어가지 않으므로, 마지막으로 넣으려던 곳으로 도착한다
+        val place = name.ifBlank { _state.value.detour }.ifBlank { lastWaypointName }.ifBlank { return }
         vehicle.overrideGear(Gear.P)
         log("도착(시연): $place")
         recordStop(TripTrigger.Stopped(place, isWaypoint = true))
@@ -537,6 +539,7 @@ class TripCoordinator(
         }
         reply.waypoint?.let { waypoint ->
             waypointIds[waypoint.name] = waypoint.id
+            lastWaypointName = waypoint.name
             navi.addWaypoint(waypoint) { result ->
                 log("경유지 요청: ${waypoint.name} → ${result::class.simpleName}")
                 when (result) {
