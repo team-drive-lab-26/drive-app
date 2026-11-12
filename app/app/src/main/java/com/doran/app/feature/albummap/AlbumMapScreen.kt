@@ -77,7 +77,8 @@ fun AlbumMapScreen(onBack: () -> Unit, viewModel: AlbumMapViewModel = viewModel(
     val measurer = rememberTextMeasurer()
     val projection = remember(ui.route, ui.pins) { MapProjection.of(ui.route, ui.pins) }
 
-    Column(Modifier.fillMaxSize().background(DoranPalette.Background)) {
+    // 앞길과 같은 하늘 아래 지도를 눕힌다
+    Column(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(DoranPalette.SkyTop, DoranPalette.SkyMid, DoranPalette.SkyHorizon)))) {
         BackBar(back = "지나온 길", title = ui.title, onBack = onBack)
         Row(Modifier.weight(1f).fillMaxWidth()) {
             Box(Modifier.weight(1f).fillMaxHeight()) {

@@ -32,6 +32,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.doran.app.core.designsystem.BackBar
@@ -49,6 +50,9 @@ import com.doran.app.core.designsystem.panel
 
 // 길가에 세울 여행 수. 더 오래된 여행은 지평선 너머로 넘긴다
 private const val MAX_SIGNS = 6
+
+// 표지판 깊이. 모두 왼쪽 길가(오른쪽은 패널)에 서므로 판이 겹치지 않게 멀수록 간격을 벌린다
+private val DEPTHS = listOf(0.07f, 0.30f, 0.60f, 0.78f, 0.88f, 0.94f)
 
 /**
  * 다녀온 여행 목록. 정차 홈의 앞길을 뒤로 돌린 '지나온 길'이다.
@@ -71,7 +75,7 @@ fun AlbumScreen(
                     id = trip.sessionId,
                     title = trip.title,
                     sub = if (trip.isCurrent) "지금 여행 · ${trip.detail}" else trip.detail,
-                    depth = 0.07f + 0.15f * i,
+                    depth = DEPTHS[i],
                     side = RoadSide.LEFT,
                     hot = trip.isCurrent,
                     selected = trip.sessionId == ui.selectedId,
@@ -80,7 +84,7 @@ fun AlbumScreen(
         }
         if (!ui.loading && trips.size < 3) {
             val i = trips.size
-            add(RoadSign("next", "다음 여행", "출발하면 여기 서", 0.07f + 0.15f * i, RoadSide.LEFT, ghost = true))
+            add(RoadSign("next", "다음 여행", "출발하면 여기 서", DEPTHS[i], RoadSide.LEFT, ghost = true))
         }
     }
     Box(Modifier.fillMaxSize().background(DoranPalette.Background)) {
@@ -96,7 +100,7 @@ fun AlbumScreen(
             SayLine(
                 when {
                     ui.loading -> "기록을 불러오는 중이야"
-                    ui.trips.isEmpty() -> "아직 지나온 길이 없어. 들른 곳에서 목소리를 남기면 여기 길가에 여행이 하나씩 서."
+                    ui.trips.isEmpty() -> "아직 지나온 길이 없어"
                     ui.offline -> "서버에 닿지 않아 이 기기에 있는 목소리만 보여 줄게."
                     ui.trips.size == 1 -> "첫 여행이 길가에 서 있어. 눌러서 그날 길을 다시 봐."
                     else -> "여행 ${ui.trips.size}번을 길가에 세워 뒀어. 가까울수록 최근이야."
@@ -104,6 +108,14 @@ fun AlbumScreen(
                 maxLines = 3,
                 modifier = Modifier.padding(start = 48.dp, top = 8.dp),
             )
+            if (!ui.loading && ui.trips.isEmpty()) {
+                Text(
+                    "여행 중에 들른 곳에서 목소리를 남기면, 그 여행이 여기 길가에 표지판으로 하나씩 서.",
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 24.sp, lineHeight = 36.sp),
+                    color = DoranPalette.InkSoft,
+                    modifier = Modifier.padding(start = 82.dp, top = 12.dp, end = 120.dp),
+                )
+            }
         }
         val selected = ui.selected
         if (selected != null) {

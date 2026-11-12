@@ -46,7 +46,7 @@ object DoranPalette {
     val RidgeFar get() = pick(0xFF151E2B, 0xFFCBD3DA)
     val RidgeMid get() = pick(0xFF0F1621, 0xFFB5C0C8)
     val RidgeNear get() = pick(0xFF0D1520, 0xFF9AA7AF)
-    val GroundFar get() = pick(0xFF121A26, 0xFFC4CBC3)
+    val GroundFar get() = pick(0xFF121A26, 0xFFB7C0B3)
     val GroundNear get() = pick(0xFF05080D, 0xFF8E9889)
     val RoadFar get() = pick(0xFF1B2331, 0xFF8C949D)
     val RoadNear get() = pick(0xFF0E141C, 0xFF3A424C)

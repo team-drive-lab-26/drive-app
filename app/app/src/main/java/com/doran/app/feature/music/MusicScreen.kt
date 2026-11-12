@@ -120,7 +120,7 @@ fun MusicScreen(
                 SayLine(
                     when {
                         talking && caption.isNotBlank() -> caption
-                        playing -> "${current?.title} 듣는 중이야"
+                        playing -> "다른 곡이 듣고 싶으면 말해 줘"
                         caption.isNotBlank() -> caption
                         featured == null -> "어떤 곡이 좋을지 골라 볼게"
                         else -> "지금은 ${featured.title} 어때?"

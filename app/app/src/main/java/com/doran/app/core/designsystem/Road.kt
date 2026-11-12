@@ -376,7 +376,9 @@ private fun androidx.compose.ui.draw.CacheDrawScope.buildLandscape(g: RoadGeomet
     val road = band(-1f, 1f)
     val gravelL = band(-1.07f, -1f)
     val gravelR = band(1f, 1.07f)
-    val roadBrush = Brush.verticalGradient(0f to DoranPalette.RoadFar, 0.35f to lerp(DoranPalette.RoadFar, DoranPalette.RoadNear, 0.75f), 1f to DoranPalette.RoadNear, startY = g.horizon, endY = h)
+    val darken = if (wet) 0.28f else 0f
+    fun wetRoad(c: Color) = lerp(c, Color.Black, darken)
+    val roadBrush = Brush.verticalGradient(0f to wetRoad(DoranPalette.RoadFar), 0.35f to wetRoad(lerp(DoranPalette.RoadFar, DoranPalette.RoadNear, 0.75f)), 1f to wetRoad(DoranPalette.RoadNear), startY = g.horizon, endY = h)
 
     // 가장자리 실선. 멀수록 가늘어지는 띠
     fun solidLine(f: Float, widthBottom: Float): Path = Path().apply {
@@ -467,7 +469,7 @@ private fun androidx.compose.ui.draw.CacheDrawScope.buildLandscape(g: RoadGeomet
         // 지평선 쪽 공기. 멀수록 하늘색에 묻힌다
         val mistTop = g.horizon - h * 0.035f
         val mistBottom = g.horizon + (h - g.horizon) * 0.26f
-        val mist = if (day) 0.72f else 0.8f
+        val mist = if (day) 0.5f else 0.8f
         drawRect(
             Brush.verticalGradient(
                 0f to haze.copy(alpha = 0f),
