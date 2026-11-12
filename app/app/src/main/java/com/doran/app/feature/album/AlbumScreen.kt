@@ -52,7 +52,7 @@ import com.doran.app.core.designsystem.panel
 private const val MAX_SIGNS = 6
 
 // 표지판 깊이. 모두 왼쪽 길가(오른쪽은 패널)에 서므로 판이 겹치지 않게 멀수록 간격을 벌린다
-private val DEPTHS = listOf(0.07f, 0.30f, 0.60f, 0.78f, 0.88f, 0.94f)
+private val DEPTHS = listOf(0.07f, 0.30f, 0.75f, 0.86f, 0.92f, 0.95f)
 
 /**
  * 다녀온 여행 목록. 정차 홈의 앞길을 뒤로 돌린 '지나온 길'이다.
@@ -110,10 +110,10 @@ fun AlbumScreen(
             )
             if (!ui.loading && ui.trips.isEmpty()) {
                 Text(
-                    "여행 중에 들른 곳에서 목소리를 남기면, 그 여행이 여기 길가에 표지판으로 하나씩 서.",
+                    "들른 곳에서 목소리를 남기면\n그 여행이 여기 길가에 표지판으로 서.",
                     style = MaterialTheme.typography.bodyLarge.copy(fontSize = 24.sp, lineHeight = 36.sp),
                     color = DoranPalette.InkSoft,
-                    modifier = Modifier.padding(start = 82.dp, top = 12.dp, end = 120.dp),
+                    modifier = Modifier.padding(start = 82.dp, top = 12.dp, end = 40.dp),
                 )
             }
         }
