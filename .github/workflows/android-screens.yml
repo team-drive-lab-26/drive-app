@@ -29,6 +29,9 @@ jobs:
         with:
           python-version: "3.12"
       - name: AI 서버 켜기 (에뮬레이터는 10.0.2.2:8765로 접속)
+        # 앨범은 빈 상태부터 찍으므로 서버가 켜질 때 시연 여행을 넣지 않는다
+        env:
+          DORAN_SEED_DEMO: "0"
         run: |
           uv sync --locked --all-packages
           nohup uv run python -m server.main > server.log 2>&1 &

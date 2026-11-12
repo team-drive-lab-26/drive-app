@@ -20,6 +20,7 @@ from server.candidates import CandidateRanker
 from server.config import ServerSettings
 from server.db import TripRepository, create_db_engine, session_factory
 from server.db.migrate import upgrade
+from server.demo_seed import seed_demo_trips
 
 DEMO_PLACES = [
     {"id": "demo-place-1", "name": "시연 장소", "source": "tour_api", "category": "attraction", "along_route": True},
@@ -433,8 +434,13 @@ def main() -> None:
     if catalog and not catalog.get("tracks"):
         catalog["tracks"] = KnowledgeBase.load(settings.doran_data_dir / "dummy").agent_catalog()["tracks"]
     upgrade(settings.doran_database_url)
-    trips = TripRepository(session_factory(create_db_engine(settings.doran_database_url)), settings.doran_region)
+    sessions = session_factory(create_db_engine(settings.doran_database_url))
+    trips = TripRepository(sessions, settings.doran_region)
     service = AgentService(**catalog, trips=trips, knowledge=knowledge)
+    # 앨범이 빈 화면으로 열리지 않도록 시연 여행을 넣는다. 빈 앨범부터 찍는 촬영에서는 DORAN_SEED_DEMO=0
+    if settings.doran_seed_demo:
+        for session_id in seed_demo_trips(service, sessions):
+            print(f"시연 여행 기록 추가: {session_id}", flush=True)
     server = ThreadingHTTPServer(("127.0.0.1", 8765), make_handler(service))
     llm = os.getenv("DORAN_LLM_MODEL") or "없음(규칙만)"
     print(f"Doran local demo server: http://127.0.0.1:8765  data={settings.doran_region} llm={llm}", flush=True)
