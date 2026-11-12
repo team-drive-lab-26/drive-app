@@ -22,9 +22,15 @@ jobs:
       - name: 단위 테스트
         run: ./gradlew --no-daemon testDebugUnitTest
       - name: APK 빌드
-        run: ./gradlew --no-daemon assembleDebug
+        run: ./gradlew --no-daemon assembleDebug assembleRelease
       - uses: actions/upload-artifact@v4
         with:
           name: doran-debug-apk
           path: app/app/build/outputs/apk/debug/*.apk
           retention-days: 7
+      # 제출용. 서버 주소는 app/gradle.properties의 doran.releaseAgentBaseUrl(호스팅 서버)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: doran-release-apk
+          path: app/app/build/outputs/apk/release/*.apk
+          retention-days: 30
