@@ -19,9 +19,15 @@ object NetworkModule {
         .readTimeout(20, TimeUnit.SECONDS)
         .build()
 
-    fun doranApi(baseUrl: String): DoranApi = Retrofit.Builder()
+    // 무료 호스팅 서버는 잠들어 있으면 깨는 데 1분 가까이 걸린다. 앱을 켤 때 깨우는 요청만 오래 기다린다
+    private val wakeClient = client.newBuilder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(90, TimeUnit.SECONDS)
+        .build()
+
+    fun doranApi(baseUrl: String, wake: Boolean = false): DoranApi = Retrofit.Builder()
         .baseUrl(baseUrl.trimEnd('/') + "/")
-        .client(client)
+        .client(if (wake) wakeClient else client)
         .addConverterFactory(json.asConverterFactory("application/json; charset=utf-8".toMediaType()))
         .build()
         .create(DoranApi::class.java)

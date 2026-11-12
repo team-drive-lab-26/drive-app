@@ -13,6 +13,7 @@ val localProperties = Properties().apply {
     if (file.exists()) file.inputStream().use(::load)
 }
 val debugAgentBaseUrl = localProperties.getProperty("doran.agentBaseUrl", "http://10.0.2.2:8765")
+val releaseAgentBaseUrl = providers.gradleProperty("doran.releaseAgentBaseUrl").orNull.orEmpty()
 
 android {
     namespace = "com.doran.app"
@@ -33,7 +34,7 @@ android {
         release {
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("debug")
-            buildConfigField("String", "AGENT_BASE_URL", "\"\"")
+            buildConfigField("String", "AGENT_BASE_URL", "\"$releaseAgentBaseUrl\"")
         }
     }
 

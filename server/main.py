@@ -441,9 +441,12 @@ def main() -> None:
     if settings.doran_seed_demo:
         for session_id in seed_demo_trips(service, sessions):
             print(f"시연 여행 기록 추가: {session_id}", flush=True)
-    server = ThreadingHTTPServer(("127.0.0.1", 8765), make_handler(service))
+    # 로컬은 127.0.0.1:8765. 호스팅(render.yaml)은 DORAN_HOST=0.0.0.0, 포트는 호스팅이 주는 PORT를 쓴다
+    host = os.getenv("DORAN_HOST", "127.0.0.1")
+    port = int(os.getenv("PORT", "8765"))
+    server = ThreadingHTTPServer((host, port), make_handler(service))
     llm = os.getenv("DORAN_LLM_MODEL") or "없음(규칙만)"
-    print(f"Doran local demo server: http://127.0.0.1:8765  data={settings.doran_region} llm={llm}", flush=True)
+    print(f"Doran server: http://{host}:{port}  data={settings.doran_region} llm={llm}", flush=True)
     try:
         server.serve_forever()
     finally:

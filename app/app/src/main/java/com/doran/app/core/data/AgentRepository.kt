@@ -12,6 +12,7 @@ import com.doran.app.core.network.TripEventsDto
 import com.doran.app.core.network.TripRecordRequest
 import com.doran.app.core.network.TripSummaryDto
 import com.doran.app.core.network.VehicleDto
+import kotlinx.coroutines.CancellationException
 
 data class AgentReply(
     val status: String,
@@ -51,7 +52,18 @@ data class WaypointRequest(
 class AgentRepository(baseUrl: String) {
     private val api: DoranApi? = baseUrl.takeIf { it.isNotBlank() }?.let(NetworkModule::doranApi)
 
+    private val wakeApi: DoranApi? = baseUrl.takeIf { it.isNotBlank() }?.let { NetworkModule.doranApi(it, wake = true) }
+
     val isConfigured: Boolean get() = api != null
+
+    /** 잠든 서버를 미리 깨운다. 실패해도 첫 질문 때 다시 붙는다 */
+    suspend fun wake(): Boolean = try {
+        wakeApi?.health() != null
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        false
+    }
 
     suspend fun send(
         sessionId: String,
