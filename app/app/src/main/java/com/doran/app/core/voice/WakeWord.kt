@@ -30,6 +30,10 @@ object WakeWord {
     private val SPOKEN_TARGETS = mapOf("도란아" to 1.0, "도란야" to 1.0, "도란" to 0.25)
     private val WORD = Regex("[^\\s,.!?~·…]+")
 
+    // 세 글자 낱말 하나만 말했으면 더 느슨하게 본다(에뮬레이터에서 "도란아"가 "드라마", "그러나"로 적혔다).
+    // 잘못 깨어나도 "응?" 하고 끝나므로, 뒤에 말이 이어질 때보다 덜 엄격해도 된다
+    private const val LONE_CALL_LIMIT = 2.5
+
     fun match(text: String): WakeMatch {
         val heard = text.trim()
         return matchWritten(heard) ?: matchSpoken(heard) ?: WakeMatch.None
@@ -65,6 +69,10 @@ object WakeWord {
     // 앞쪽 낱말 하나 또는 붙은 두 낱말("돌 아나")을 호출어와 견줘 가장 가까운 것을 고른다
     private fun matchSpoken(heard: String): WakeMatch? {
         val words = WORD.findAll(heard).toList()
+        val lone = words.singleOrNull()?.value
+        if (lone != null && lone.count { it in '가'..'힣' } == CALL.length && JamoDistance.between(lone, CALL) <= LONE_CALL_LIMIT) {
+            return WakeMatch.CallOnly
+        }
         val best = words.indices
             .takeWhile { leadingChars(heard, words[it].range.first) <= MAX_LEADING_CHARS }
             .flatMap { i -> listOfNotNull(i..i, (i..i + 1).takeIf { i + 1 < words.size }) }

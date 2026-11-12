@@ -126,6 +126,13 @@ def run_case(q, group, sentence, how) -> "dict | None":
         else:
             extra = f" / 요청: {heard['command']}" if heard.get("command") else ""
             print(f"    받아 적기: {heard['text']}  →  {heard['match']}{extra}")
+            if group == "B" and heard["match"] == "CallOnly":
+                # 요청 앞에서 받아 적기가 끊기면 도란이 "응?" 하고 다시 듣는다. 실제로 쓸 때처럼 요청만 다시 말한다
+                print("    호출만 들렸어요. 도란이 \"응?\" 하면 요청만 다시 말하세요")
+                follow = wait_for(q, "heard", HEARD_TIMEOUT)
+                if follow:
+                    print(f"    다시 받아 적기: {follow['text']}")
+                    heard = {**heard, "match": "Command", "command": follow.get("command") or follow["text"], "retry": True}
             if group == "B" and heard["match"] == "Command":
                 reply = wait_for(q, "reply", REPLY_TIMEOUT)
                 print(f"    도란 답: {reply['caption']} ({reply['status']})" if reply else "    답이 오지 않았어요")
@@ -139,6 +146,7 @@ def run_case(q, group, sentence, how) -> "dict | None":
             "heard": heard["text"] if heard else None,
             "match": heard["match"] if heard else "NothingHeard",
             "command": heard.get("command") if heard else None,
+            "retry": bool(heard and heard.get("retry")),
             "reply": reply,
         }
         if group == "B" and reply:
@@ -147,7 +155,7 @@ def run_case(q, group, sentence, how) -> "dict | None":
 
 
 def score(results: list) -> dict:
-    counts = {g: {"total": 0, "wake": 0, "split": 0, "answer": 0, "false_wake": 0} for g in "ABC"}
+    counts = {g: {"total": 0, "wake": 0, "split": 0, "answer": 0, "false_wake": 0, "retry": 0} for g in "ABC"}
     for r in results:
         c = counts[r["group"]]
         c["total"] += 1
@@ -157,6 +165,8 @@ def score(results: list) -> dict:
         if r["group"] == "B":
             if r["match"] == "Command":
                 c["split"] += 1
+            if r.get("retry"):
+                c["retry"] += 1
             if r.get("answer_ok"):
                 c["answer"] += 1
         if r["group"] == "C" and woke:
@@ -178,7 +188,8 @@ def verdicts(counts: dict, groups: str, complete: bool) -> "tuple[list, bool]":
                 ok = c[key] >= need
                 rule = f"{planned}회 중 {need}회 이상"
             passed = passed and ok
-            rows.append((GROUP_NAMES[g], label, f"{c[key]} / {c['total']}", rule, "통과" if ok else "미달"))
+            note = f" (다시 말함 {c['retry']})" if key == "split" and c["retry"] else ""
+            rows.append((GROUP_NAMES[g], label, f"{c[key]} / {c['total']}{note}", rule, "통과" if ok else "미달"))
     return rows, passed
 
 

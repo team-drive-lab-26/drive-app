@@ -37,6 +37,16 @@ class WakeWordTest {
     }
 
     @Test
+    fun acceptsLoneWordMoreLoosely() {
+        assertEquals(WakeMatch.CallOnly, WakeWord.match("드라마"))
+        assertEquals(WakeMatch.CallOnly, WakeWord.match("그러나"))
+        assertEquals(WakeMatch.CallOnly, WakeWord.match("올아나"))
+        assertEquals(WakeMatch.None, WakeWord.match("너나"))
+        assertEquals(WakeMatch.None, WakeWord.match("돌아가자"))
+        assertEquals(WakeMatch.None, WakeWord.match("휴게소"))
+    }
+
+    @Test
     fun rejectsOtherWordsBySound() {
         assertEquals(WakeMatch.None, WakeWord.match("드라마 틀어 줘"))
         assertEquals(WakeMatch.None, WakeWord.match("토란 먹자"))
