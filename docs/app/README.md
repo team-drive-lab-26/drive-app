@@ -40,6 +40,8 @@
 - [확정] 출발, 도착 30분 전, 재탑승, 110분 연속 운전 이벤트를 앱이 판단해 서버로 보낸다
 - [확정] 내비 도착 후 P로 세우면 정차 기록(`stop`)을 서버에 보낸다
 - [확정] 경유지는 장소 번호가 없어도 좌표로 넣는다(에뮬레이터에서 확인)
+- [확정] 경유지를 넣은 뒤 3초, 10초에 남은 시간을 다시 묻는다. 내비가 경로를 다시 짜도 남은 시간 이벤트가 바로 오지 않아서다(실기기 확인 전)
+- [확정] 재탑승 이벤트는 15분 넘게 세웠다가 문을 열고 닫아야 나간다. 서버는 밤 9시~아침 7시, 같은 종류 제안을 이미 한 날, 최근 1시간에 제안 2번이면 답하지 않는다
 - [예정] 집 위치를 설정에서 받을지, 시연에서는 고정값을 쓸지 정한다
 
 ## 음성
@@ -93,5 +95,19 @@
 - [예정] 앱은 죽지 않는다. 연결 실패는 자막 한 줄로 알리거나 조용히 넘어간다
 
 ## 시연 범위
+
+에뮬레이터 내비는 실제로 도착하지 않으므로 debug 빌드에서 인텐트로 흐름을 잇는다.
+
+```
+adb shell am start -n com.doran.app/.MainActivity --es gear D
+adb shell am start -n com.doran.app/.MainActivity --es event continuous_drive   # 휴게소 제안
+adb shell am start -n com.doran.app/.MainActivity --es say "응"                   # 경유지 추가
+adb shell am start -n com.doran.app/.MainActivity --es arrive -                  # 넣어 둔 경유지에 도착, P로 세움, "한마디 남길래?"
+adb shell am start -n com.doran.app/.MainActivity --es say "응"                   # 녹음 화면
+adb shell am start -n com.doran.app/.MainActivity --es event reboarded          # 재탑승 제안
+```
+
+- `arrive`에 이름을 주면 그 이름으로 도착한다. `-`이면 넣어 둔 경유지를 쓴다
+- `event`로 보낸 시연 이벤트는 밤 9시~아침 7시에 보내면 시각을 오늘 오후 2시로 바꿔 보낸다. 같은 종류 제안은 하루 한 번이라 다시 보려면 앱을 새로 켠다
 
 - [예정] 출발 → 휴게소 제안·경유지 추가 → 정차·재탑승 → 음악 → 음성 캡슐 → 앨범 순서로 보여 주고, 여기에 없는 기능은 뒤로 미룬다
