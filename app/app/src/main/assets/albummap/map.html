@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 3D 지도 앨범. 앱(AlbumMapScreen)이 WebView로 띄우고 show()·select()로 여행 기록을 넘긴다.
+     지도는 키가 필요 없는 무료 지도(OpenFreeMap, OpenStreetMap 데이터)와 공개 지형 고도 타일을 쓴다. -->
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<style>
+  html, body { margin: 0; font-family: sans-serif; }
+  /* WebView가 화면에 붙기 전에 페이지를 읽으면 height: 100%가 0으로 굳어 지도가 안 보인다. 화면 크기에 바로 맞춘다 */
+  #map { position: fixed; inset: 0; }
+  .pin {
+    width: 34px; height: 34px; border-radius: 50%; box-sizing: border-box;
+    display: flex; align-items: center; justify-content: center;
+    background: #fff; border: 3px solid var(--accent); color: var(--accent);
+    font: 800 16px sans-serif; box-shadow: 0 2px 6px rgba(0, 0, 0, .25); cursor: pointer;
+  }
+  .pin.voice { background: var(--accent); color: #fff; }
+  .pin.on { width: 48px; height: 48px; font-size: 21px; box-shadow: 0 0 0 10px rgba(242, 106, 31, .25), 0 2px 8px rgba(0, 0, 0, .3); }
+  .start { width: 14px; height: 14px; border-radius: 50%; background: #10151c; border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .4); }
+  .tag { background: #fff; color: #10151c; padding: 6px 12px; border-radius: 10px; font: 700 15px sans-serif; box-shadow: 0 1px 6px rgba(0, 0, 0, .2); white-space: nowrap; }
+  .maplibregl-popup-content { background: #10151c; color: #fff; border-radius: 12px; padding: 10px 14px; font: 700 16px sans-serif; }
+  .maplibregl-popup-content small { display: block; font-weight: 500; font-size: 14px; opacity: .8; margin-top: 2px; }
+  .maplibregl-popup-tip { border-top-color: #10151c !important; border-bottom-color: #10151c !important; }
+</style>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" onerror="Doran.failed()"></script>
+</head>
+<body>
+<div id="map"></div>
+<script>
+let map, loaded = false, data = null, markers = [], popup = null;
+
+try {
+  map = new maplibregl.Map({
+    container: 'map',
+    style: 'https://tiles.openfreemap.org/styles/liberty',
+    center: [127.9, 37.6], zoom: 7.4, pitch: 50, bearing: -10, maxPitch: 75,
+    attributionControl: { compact: true },
+  });
+} catch (e) {
+  Doran.failed();
+}
+
+map && map.on('error', e => console.log('map error', e.error && e.error.message));
+map && map.on('load', () => {
+  // 지명은 한국어 이름을 먼저 쓴다
+  for (const layer of map.getStyle().layers) {
+    if (layer.type === 'symbol' && layer.layout && layer.layout['text-field']) {
+      map.setLayoutProperty(layer.id, 'text-field', ['coalesce', ['get', 'name:ko'], ['get', 'name']]);
+    }
+  }
+  // 산이 솟아 보이게 지형 고도와 음영을 깐다
+  map.addSource('dem', { type: 'raster-dem', encoding: 'terrarium', tileSize: 256, maxzoom: 13,
+    tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'] });
+  map.setTerrain({ source: 'dem', exaggeration: 1.5 });
+  const firstSymbol = map.getStyle().layers.find(l => l.type === 'symbol');
+  map.addLayer({ id: 'hill', type: 'hillshade', source: 'dem',
+    paint: { 'hillshade-exaggeration': 0.35, 'hillshade-shadow-color': '#6b7f73' } }, firstSymbol && firstSymbol.id);
+  map.addSource('route', { type: 'geojson', data: line([]) });
+  map.addLayer({ id: 'route-case', type: 'line', source: 'route',
+    layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 9 } });
+  map.addLayer({ id: 'route', type: 'line', source: 'route',
+    layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#F26A1F', 'line-width': 5 } });
+  loaded = true;
+  Doran.ready();
+});
+
+function line(coords) {
+  return { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } };
+}
+
+/** 앱이 여행 기록을 넘긴다. route는 [경도, 위도], pins는 들른 순서 */
+function show(next) {
+  data = next;
+  if (!loaded) return;
+  document.documentElement.style.setProperty('--accent', data.accent);
+  map.setPaintProperty('route', 'line-color', data.accent);
+  map.getSource('route').setData(line(data.route));
+  markers.forEach(m => m.remove());
+  markers = [];
+  if (data.route.length > 1) {
+    const start = document.createElement('div');
+    start.className = 'start';
+    markers.push(new maplibregl.Marker({ element: start }).setLngLat(data.route[0]).addTo(map));
+    const tag = document.createElement('div');
+    tag.className = 'tag';
+    tag.textContent = '출발';
+    markers.push(new maplibregl.Marker({ element: tag, offset: [0, 26] }).setLngLat(data.route[0]).addTo(map));
+  }
+  data.pins.forEach((pin, i) => {
+    const el = document.createElement('div');
+    el.className = 'pin' + (pin.voices ? ' voice' : '');
+    el.textContent = String(i + 1);
+    el.dataset.id = pin.id;
+    el.addEventListener('click', e => { e.stopPropagation(); Doran.select(pin.id); });
+    markers.push(new maplibregl.Marker({ element: el }).setLngLat([pin.lng, pin.lat]).addTo(map));
+  });
+  const points = data.route.concat(data.pins.map(p => [p.lng, p.lat]));
+  if (points.length) {
+    const bounds = points.reduce((b, p) => b.extend(p), new maplibregl.LngLatBounds(points[0], points[0]));
+    map.fitBounds(bounds, { padding: 90, pitch: 50, bearing: -10, maxZoom: 12, duration: 1800 });
+  }
+  if (data.selected) setTimeout(() => select(data.selected, false), 1900);
+}
+
+/** 고른 곳으로 날아가 말풍선을 띄운다. fly가 false면 말풍선만 바꾼다 */
+function select(id, fly = true) {
+  if (!data) return;
+  const pin = data.pins.find(p => p.id === id);
+  document.querySelectorAll('.pin').forEach(el => el.classList.toggle('on', el.dataset.id === id));
+  if (popup) popup.remove();
+  if (!pin) return;
+  const body = document.createElement('div');
+  body.textContent = pin.name;
+  if (pin.voices || pin.time) {
+    const sub = document.createElement('small');
+    sub.textContent = [pin.time, pin.voices].filter(Boolean).join(' · ');
+    body.appendChild(sub);
+  }
+  popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 30 })
+    .setLngLat([pin.lng, pin.lat]).setDOMContent(body).addTo(map);
+  if (fly) map.flyTo({ center: [pin.lng, pin.lat], zoom: Math.max(map.getZoom(), 10.5), pitch: 60, duration: 1600 });
+}
+</script>
+</body>
+</html>

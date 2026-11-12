@@ -1,5 +1,11 @@
 package com.doran.app.feature.albummap
 
+import android.annotation.SuppressLint
+import android.util.Log
+import android.webkit.ConsoleMessage
+import android.webkit.JavascriptInterface
+import android.webkit.WebChromeClient
+import android.webkit.WebView
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -21,14 +27,21 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,14 +53,17 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.doran.app.core.designsystem.BackBar
@@ -55,177 +71,305 @@ import com.doran.app.core.designsystem.DoranPalette
 import com.doran.app.core.designsystem.DoranText
 import com.doran.app.core.designsystem.FamilyRibbon
 import com.doran.app.core.designsystem.PersonDot
-import com.doran.app.core.designsystem.Rule
 import com.doran.app.core.designsystem.Suit
+import kotlinx.coroutines.delay
+import org.json.JSONArray
+import org.json.JSONObject
+import kotlin.math.asin
 import kotlin.math.cos
 import kotlin.math.hypot
+import kotlin.math.roundToInt
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 /**
- * 3D 지도 앨범. 다녀온 길을 비스듬히 눕힌 지도 위에 주황 경로선으로 그리고, 들른 곳마다 핀을 세운다.
- * 아래에는 들른 순서대로 지나온 길 막대가 있고, 지도 핀이나 막대 위 점 어느 쪽을 눌러도 같은 곳이 골라진다.
- * 목소리를 남긴 핀은 남긴 사람 색이고, 고르면 오른쪽 칸에서 그 목소리를 다시 듣는다.
- * 열 때 지도가 위에서 내려다보는 각도에서 비스듬한 각도로 눕는다.
+ * 3D 지도 앨범. 왼쪽에 들른 순서대로 곳과 남긴 목소리를, 오른쪽에 실제 지형 위 다녀온 길을 보여 준다.
+ * 왼쪽 목록이나 지도 핀 어느 쪽을 눌러도 같은 곳이 골라지고, 목소리는 목록에서 다시 듣는다.
+ * 지도는 WebView의 MapLibre(assets/albummap/map.html)로 그리고, 인터넷이 없거나 지도를 못 띄우면 기기에서 그린 평면 지도로 바꾼다.
  */
 @Composable
 fun AlbumMapScreen(onBack: () -> Unit, viewModel: AlbumMapViewModel = viewModel(factory = AlbumMapViewModel.Factory)) {
     val ui by viewModel.state.collectAsStateWithLifecycle()
     val playing by viewModel.playingId.collectAsStateWithLifecycle()
+    var webFailed by remember { mutableStateOf(false) }
+
+    Column(Modifier.fillMaxSize().background(DoranPalette.Background)) {
+        BackBar(back = "지나온 길", title = ui.title, onBack = onBack)
+        Row(Modifier.weight(1f).fillMaxWidth().padding(start = 40.dp, end = 40.dp, bottom = 28.dp)) {
+            StopList(ui, playing, onSelect = viewModel::select, onToggle = viewModel::toggle, modifier = Modifier.width(520.dp).fillMaxHeight())
+            Spacer(Modifier.width(28.dp))
+            Box(
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(24.dp))
+                    .border(1.dp, DoranPalette.Line, RoundedCornerShape(24.dp)),
+            ) {
+                if (webFailed) {
+                    FlatMap(ui, onSelect = viewModel::select, modifier = Modifier.fillMaxSize())
+                } else {
+                    WebMap(ui, onSelect = viewModel::select, onFailed = { webFailed = true }, modifier = Modifier.fillMaxSize())
+                }
+                if (ui.message.isNotBlank()) {
+                    Text(
+                        ui.message,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = DoranPalette.Ink,
+                        modifier = Modifier.padding(24.dp).clip(RoundedCornerShape(12.dp)).background(DoranPalette.Surface).padding(horizontal = 16.dp, vertical = 10.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** 왼쪽 칸. 여행 요약과 들른 곳 목록, 곳마다 남긴 목소리 */
+@Composable
+private fun StopList(
+    ui: AlbumMapUiState,
+    playingId: String?,
+    onSelect: (String) -> Unit,
+    onToggle: (Voice) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val listState = rememberLazyListState()
+    LaunchedEffect(ui.selectedId) {
+        val index = ui.pins.indexOfFirst { it.id == ui.selectedId }
+        if (index >= 0) listState.animateScrollToItem(index + 1)
+    }
+    LazyColumn(modifier, state = listState) {
+        item {
+            val voiceCount = ui.pins.sumOf { it.voices.size }
+            val km = routeKm(ui.route)
+            Row(Modifier.padding(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (km > 0) SummaryChip("${km}km")
+                SummaryChip("${ui.pins.size}곳")
+                SummaryChip("목소리 ${voiceCount}개")
+            }
+        }
+        itemsIndexed(ui.pins, key = { _, pin -> pin.id }) { index, pin ->
+            StopRow(index + 1, pin, selected = pin.id == ui.selectedId, last = index == ui.pins.lastIndex, playingId = playingId, onSelect = onSelect, onToggle = onToggle)
+        }
+    }
+}
+
+@Composable
+private fun SummaryChip(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.titleMedium,
+        color = DoranPalette.Ink,
+        modifier = Modifier.clip(RoundedCornerShape(50)).background(DoranPalette.Surface).border(1.dp, DoranPalette.Line, RoundedCornerShape(50)).padding(horizontal = 18.dp, vertical = 10.dp),
+    )
+}
+
+@Composable
+private fun StopRow(
+    number: Int,
+    pin: MapPin,
+    selected: Boolean,
+    last: Boolean,
+    playingId: String?,
+    onSelect: (String) -> Unit,
+    onToggle: (Voice) -> Unit,
+) {
+    val shape = RoundedCornerShape(20.dp)
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(if (selected) DoranPalette.Accent.copy(alpha = 0.14f) else Color.Transparent)
+            .clickable { onSelect(pin.id) }
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+    ) {
+        // 번호 원. 지도 핀과 같은 번호다
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                Modifier
+                    .size(44.dp)
+                    .background(if (pin.voices.isNotEmpty()) DoranPalette.Accent else DoranPalette.Surface, CircleShape)
+                    .border(3.dp, DoranPalette.Accent, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("$number", style = MaterialTheme.typography.titleMedium, color = if (pin.voices.isNotEmpty()) DoranPalette.OnAccent else DoranPalette.Accent, textAlign = TextAlign.Center)
+            }
+            if (!last) Box(Modifier.padding(top = 6.dp).width(2.dp).height(28.dp).background(DoranPalette.AccentSoft))
+        }
+        Spacer(Modifier.width(18.dp))
+        Column(Modifier.weight(1f)) {
+            Text(pin.name, style = MaterialTheme.typography.headlineSmall, color = DoranPalette.Ink)
+            if (pin.time.isNotBlank()) Text("${pin.time} 도착", style = DoranText.number, color = DoranPalette.InkSoft)
+            pin.voices.forEach { voice ->
+                Spacer(Modifier.height(10.dp))
+                VoicePill(voice, playing = playingId == voice.capsuleId, onToggle = onToggle)
+            }
+        }
+    }
+}
+
+/** 남긴 사람과 길이. 누르면 다시 듣는다 */
+@Composable
+private fun VoicePill(voice: Voice, playing: Boolean, onToggle: (Voice) -> Unit) {
+    Row(
+        Modifier
+            .heightIn(min = 64.dp)
+            .clip(RoundedCornerShape(50))
+            .background(DoranPalette.Surface)
+            .border(1.dp, DoranPalette.Line, RoundedCornerShape(50))
+            .clickable(enabled = voice.available) { onToggle(voice) }
+            .padding(start = 10.dp, end = 22.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(44.dp).background(if (voice.available) DoranPalette.Accent else DoranPalette.LineStrong, CircleShape), contentAlignment = Alignment.Center) {
+            Text(if (playing) "■" else "▶", color = DoranPalette.OnAccent, style = MaterialTheme.typography.titleMedium)
+        }
+        Spacer(Modifier.width(12.dp))
+        PersonDot(voice.speaker, Modifier.size(14.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(voice.speaker, style = MaterialTheme.typography.titleMedium, color = DoranPalette.Ink)
+        Spacer(Modifier.width(10.dp))
+        Text(
+            if (voice.available) "0:%02d".format(voice.seconds) else "다른 기기에서 남김",
+            style = DoranText.number,
+            color = DoranPalette.InkSoft,
+        )
+    }
+}
+
+/** 실제 지형 지도. 페이지가 준비되면 기록을 넘기고, 핀을 누르면 [onSelect]를 부른다 */
+@SuppressLint("SetJavaScriptEnabled")
+@Composable
+private fun WebMap(ui: AlbumMapUiState, onSelect: (String) -> Unit, onFailed: () -> Unit, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    // JS 다리 함수 이름(select, failed)과 겹치지 않게 이름을 달리 둔다
+    val pick by rememberUpdatedState(onSelect)
+    val giveUp by rememberUpdatedState(onFailed)
+    var ready by remember { mutableStateOf(false) }
+    val webView = remember {
+        val html = context.assets.open("albummap/map.html").bufferedReader().use { it.readText() }
+        WebView(context).apply {
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            setBackgroundColor(DoranPalette.Surface.toArgb())
+            // 지도 페이지 오류를 logcat(DoranMap)에서 보이게 한다
+            webChromeClient = object : WebChromeClient() {
+                override fun onConsoleMessage(message: ConsoleMessage): Boolean {
+                    Log.d("DoranMap", "${message.message()} (${message.lineNumber()})")
+                    return true
+                }
+            }
+            addJavascriptInterface(
+                object {
+                    @JavascriptInterface fun ready() = post { ready = true }
+                    @JavascriptInterface fun select(id: String) = post { pick(id) }
+                    @JavascriptInterface fun failed() = post { giveUp() }
+                },
+                "Doran",
+            )
+            // 외부 지도 서버가 막지 않도록 https 주소를 바탕으로 연다
+            loadDataWithBaseURL("https://doran.app/albummap/", html, "text/html", "utf-8", null)
+        }
+    }
+    DisposableEffect(webView) { onDispose { webView.destroy() } }
+    // 인터넷이 없으면 지도가 끝내 안 뜨므로 기다리다 평면 지도로 바꾼다
+    LaunchedEffect(Unit) {
+        delay(WEB_MAP_TIMEOUT_MS)
+        if (!ready) giveUp()
+    }
+    LaunchedEffect(ready, ui.route, ui.pins) {
+        if (ready && !ui.loading) webView.evaluateJavascript("show(${mapJson(ui)})", null)
+    }
+    LaunchedEffect(ready, ui.selectedId) {
+        val id = ui.selectedId ?: return@LaunchedEffect
+        if (ready) webView.evaluateJavascript("select(${JSONObject.quote(id)})", null)
+    }
+    AndroidView(factory = { webView }, modifier = modifier)
+}
+
+private const val WEB_MAP_TIMEOUT_MS = 12_000L
+
+private fun mapJson(ui: AlbumMapUiState): String = JSONObject().apply {
+    put("accent", "#%06X".format(0xFFFFFF and DoranPalette.Accent.toArgb()))
+    put("route", JSONArray(ui.route.map { (lat, lon) -> JSONArray(listOf(lon, lat)) }))
+    put("pins", JSONArray(ui.pins.map { pin ->
+        JSONObject()
+            .put("id", pin.id)
+            .put("name", pin.name)
+            .put("time", pin.time)
+            .put("lat", pin.latitude)
+            .put("lng", pin.longitude)
+            .put("voices", pin.voices.joinToString(" · ") { it.speaker })
+    }))
+    put("selected", ui.selectedId ?: JSONObject.NULL)
+}.toString()
+
+/** 다녀온 길 길이(km). 경로 점 사이 거리를 더한다 */
+private fun routeKm(route: List<Pair<Double, Double>>): Int =
+    route.zipWithNext { (lat1, lon1), (lat2, lon2) ->
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = sin(dLat / 2) * sin(dLat / 2) + cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * sin(dLon / 2) * sin(dLon / 2)
+        6371.0 * 2 * asin(sqrt(a))
+    }.sum().roundToInt()
+
+/** 인터넷이 없을 때 쓰는 평면 지도. 다녀온 길을 비스듬히 눕힌 판 위에 그린다 */
+@Composable
+private fun FlatMap(ui: AlbumMapUiState, onSelect: (String) -> Unit, modifier: Modifier = Modifier) {
     val tilt = remember { Animatable(0.15f) }
     LaunchedEffect(ui.loading) {
         if (!ui.loading) tilt.animateTo(1.35f, tween(1400, easing = FastOutSlowInEasing))
     }
     val measurer = rememberTextMeasurer()
     val projection = remember(ui.route, ui.pins) { MapProjection.of(ui.route, ui.pins) }
-
-    // 앞길과 같은 하늘 아래 지도를 눕힌다
-    Column(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(DoranPalette.SkyTop, DoranPalette.SkyMid, DoranPalette.SkyHorizon)))) {
-        BackBar(back = "지나온 길", title = ui.title, onBack = onBack)
-        Row(Modifier.weight(1f).fillMaxWidth()) {
-            Box(Modifier.weight(1f).fillMaxHeight()) {
-                Canvas(
-                    Modifier
-                        .fillMaxSize()
-                        .pointerInput(ui.pins, projection) {
-                            detectTapGestures { tap ->
-                                val hit = ui.pins.minByOrNull { pin ->
-                                    val head = projection.pinHead(pin, size.width.toFloat(), size.height.toFloat(), tilt.value)
-                                    hypot(head.x - tap.x, head.y - tap.y)
-                                } ?: return@detectTapGestures
-                                val head = projection.pinHead(hit, size.width.toFloat(), size.height.toFloat(), tilt.value)
-                                if (hypot(head.x - tap.x, head.y - tap.y) < 90f) viewModel.select(hit.id)
-                            }
-                        },
-                ) {
-                    val k = tilt.value
-                    drawGround(projection, k)
-                    drawRoute(projection, ui.route, k)
-                    // 먼 핀부터 그려 가까운 핀이 위에 오게 한다
-                    ui.pins.sortedByDescending { projection.depth(it.latitude) }.forEach { pin ->
-                        val ground = projection.ground(pin.latitude, pin.longitude, size.width, size.height, k)
-                        val head = projection.pinHead(pin, size.width, size.height, k)
-                        val scale = projection.scale(projection.depth(pin.latitude), k)
-                        val selected = pin.id == ui.selectedId
-                        val color = pin.voices.firstOrNull()?.let { FamilyRibbon.colorFor(it.speaker) } ?: DoranPalette.Ink
-                        drawOval(Color.Black.copy(alpha = 0.35f), topLeft = Offset(ground.x - 14f * scale, ground.y - 5f * scale), size = Size(28f * scale, 10f * scale))
-                        drawLine(DoranPalette.InkSoft, ground, head, strokeWidth = 4f * scale, cap = StrokeCap.Round)
-                        val radius = (if (selected) 24f else 17f) * scale
-                        if (selected) drawCircle(DoranPalette.Accent, radius + 8f * scale, head)
-                        drawCircle(color, radius, head)
-                        val label = measurer.measure(pin.name, TextStyle(fontFamily = Suit, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = if (selected) DoranPalette.OnAccent else DoranPalette.Ink))
-                        // 이름표. 경로선 위에 겹쳐도 읽히게 바탕을 깐다
-                        val padX = 10.dp.toPx()
-                        val padY = 4.dp.toPx()
-                        val tl = Offset(head.x - label.size.width / 2f - padX, head.y - radius - label.size.height - padY * 2 - 8.dp.toPx())
-                        drawRoundRect(
-                            if (selected) DoranPalette.Accent else DoranPalette.Surface.copy(alpha = 0.94f),
-                            topLeft = tl,
-                            size = Size(label.size.width + padX * 2, label.size.height + padY * 2),
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(8.dp.toPx()),
-                        )
-                        drawText(label, topLeft = Offset(tl.x + padX, tl.y + padY))
-                    }
-                    projection.endLabels(ui.route).forEach { (text, point) ->
-                        val p = projection.ground(point.first, point.second, size.width, size.height, k)
-                        val label = measurer.measure(text, TextStyle(fontFamily = Suit, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = DoranPalette.InkSoft))
-                        val padX = 8.dp.toPx()
-                        val tl = Offset(p.x - label.size.width / 2f - padX, p.y + 14.dp.toPx())
-                        drawRoundRect(DoranPalette.Background.copy(alpha = 0.9f), topLeft = tl, size = Size(label.size.width + padX * 2, label.size.height + 4.dp.toPx()), cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx()))
-                        drawText(label, topLeft = Offset(tl.x + padX, tl.y + 2.dp.toPx()))
-                    }
-                }
-                if (ui.message.isNotBlank()) {
-                    Text(ui.message, style = MaterialTheme.typography.bodyLarge, color = DoranPalette.InkSoft, modifier = Modifier.padding(start = 40.dp, top = 4.dp))
-                }
-            }
-            // 고른 곳 칸은 지도 옆 자리를 따로 둬서 지도 끝(도착)을 가리지 않는다
-            Column(Modifier.width(460.dp).fillMaxHeight().padding(end = 40.dp, top = 8.dp, bottom = 24.dp)) {
-                val pin = ui.selected
-                if (pin != null) {
-                    PinPanel(pin = pin, playingId = playing, onToggle = viewModel::toggle, modifier = Modifier.fillMaxWidth())
-                } else if (!ui.loading && ui.pins.isNotEmpty()) {
-                    Text("지도 핀이나 아래 막대의 점을 누르면 그곳에서 남긴 목소리를 들을 수 있어.", style = MaterialTheme.typography.bodyLarge, color = DoranPalette.InkSoft)
-                }
-            }
-        }
-        StopTimeline(ui.pins, ui.selectedId, onSelect = viewModel::select)
-    }
-}
-
-/** 지나온 길 막대. 들른 순서대로 점을 찍고, 목소리를 남긴 곳은 그 사람 색 */
-@Composable
-private fun StopTimeline(pins: List<MapPin>, selectedId: String?, onSelect: (String) -> Unit) {
-    if (pins.isEmpty()) return
-    Box(Modifier.fillMaxWidth().height(132.dp).padding(horizontal = 40.dp)) {
-        // 점들을 꿰는 선. 점 가운데 높이에 맞춘다
-        Canvas(Modifier.align(Alignment.TopStart).padding(start = 60.dp, end = 60.dp, top = 11.dp).fillMaxWidth().height(4.dp)) {
-            drawLine(DoranPalette.LineStrong, Offset(0f, size.height / 2f), Offset(size.width, size.height / 2f), strokeWidth = 4.dp.toPx(), cap = StrokeCap.Round)
-        }
-        Row(Modifier.fillMaxWidth().padding(top = 0.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            pins.forEach { pin ->
-                val selected = pin.id == selectedId
-                Column(
-                    Modifier
-                        .heightIn(min = 112.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .clickable { onSelect(pin.id) }
-                        .padding(horizontal = 12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Box(
-                        Modifier
-                            .padding(top = 0.dp)
-                            .size(if (selected) 26.dp else 20.dp)
-                            .background(if (selected) DoranPalette.Accent else DoranPalette.Background, CircleShape)
-                            .border(3.dp, if (selected) DoranPalette.Accent else DoranPalette.InkSoft, CircleShape),
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    Text(pin.name, style = MaterialTheme.typography.titleMedium, color = if (selected) DoranPalette.Ink else DoranPalette.InkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(220.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        pin.voices.forEach { PersonDot(it.speaker, Modifier.size(12.dp)) }
-                        if (pin.time.isNotBlank()) Text(pin.time, style = DoranText.number, color = DoranPalette.InkMute)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PinPanel(pin: MapPin, playingId: String?, onToggle: (Voice) -> Unit, modifier: Modifier = Modifier) {
-    val shape = RoundedCornerShape(22.dp)
-    Column(
+    Canvas(
         modifier
-            .clip(shape)
-            .background(DoranPalette.Surface)
-            .border(1.dp, DoranPalette.Line, shape)
-            .padding(horizontal = 28.dp, vertical = 24.dp),
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(DoranPalette.SkyTop, DoranPalette.SkyMid, DoranPalette.SkyHorizon)))
+            .pointerInput(ui.pins, projection) {
+                detectTapGestures { tap ->
+                    val hit = ui.pins.minByOrNull { pin ->
+                        val head = projection.pinHead(pin, size.width.toFloat(), size.height.toFloat(), tilt.value)
+                        hypot(head.x - tap.x, head.y - tap.y)
+                    } ?: return@detectTapGestures
+                    val head = projection.pinHead(hit, size.width.toFloat(), size.height.toFloat(), tilt.value)
+                    if (hypot(head.x - tap.x, head.y - tap.y) < 90f) onSelect(hit.id)
+                }
+            },
     ) {
-        Text(pin.name, style = MaterialTheme.typography.headlineMedium, color = DoranPalette.Ink)
-        if (pin.time.isNotBlank()) Text("${pin.time} 도착", style = DoranText.number, color = DoranPalette.InkSoft)
-        Spacer(Modifier.height(12.dp))
-        if (pin.voices.isEmpty()) {
-            Text("여기서는 목소리를 남기지 않았어.", style = MaterialTheme.typography.bodyMedium, color = DoranPalette.InkSoft)
+        val k = tilt.value
+        drawGround(projection, k)
+        drawRoute(projection, ui.route, k)
+        // 먼 핀부터 그려 가까운 핀이 위에 오게 한다
+        ui.pins.sortedByDescending { projection.depth(it.latitude) }.forEach { pin ->
+            val ground = projection.ground(pin.latitude, pin.longitude, size.width, size.height, k)
+            val head = projection.pinHead(pin, size.width, size.height, k)
+            val scale = projection.scale(projection.depth(pin.latitude), k)
+            val selected = pin.id == ui.selectedId
+            val color = pin.voices.firstOrNull()?.let { FamilyRibbon.colorFor(it.speaker) } ?: DoranPalette.Ink
+            drawOval(Color.Black.copy(alpha = 0.35f), topLeft = Offset(ground.x - 14f * scale, ground.y - 5f * scale), size = Size(28f * scale, 10f * scale))
+            drawLine(DoranPalette.InkSoft, ground, head, strokeWidth = 4f * scale, cap = StrokeCap.Round)
+            val radius = (if (selected) 24f else 17f) * scale
+            if (selected) drawCircle(DoranPalette.Accent, radius + 8f * scale, head)
+            drawCircle(color, radius, head)
+            val label = measurer.measure(pin.name, TextStyle(fontFamily = Suit, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = if (selected) DoranPalette.OnAccent else DoranPalette.Ink))
+            // 이름표. 경로선 위에 겹쳐도 읽히게 바탕을 깐다
+            val padX = 10.dp.toPx()
+            val padY = 4.dp.toPx()
+            val tl = Offset(head.x - label.size.width / 2f - padX, head.y - radius - label.size.height - padY * 2 - 8.dp.toPx())
+            drawRoundRect(
+                if (selected) DoranPalette.Accent else DoranPalette.Surface.copy(alpha = 0.94f),
+                topLeft = tl,
+                size = Size(label.size.width + padX * 2, label.size.height + padY * 2),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(8.dp.toPx()),
+            )
+            drawText(label, topLeft = Offset(tl.x + padX, tl.y + padY))
         }
-        pin.voices.forEachIndexed { index, voice ->
-            if (index > 0) Rule()
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 72.dp)
-                    .clickable(enabled = voice.available) { onToggle(voice) }
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                PersonDot(voice.speaker, Modifier.size(22.dp))
-                Spacer(Modifier.width(14.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(voice.speaker, style = MaterialTheme.typography.titleLarge, color = DoranPalette.Ink)
-                    Text(if (voice.available) "${voice.seconds}초" else "다른 기기에서 남긴 목소리라 여기선 못 들어", style = MaterialTheme.typography.bodyMedium, color = DoranPalette.InkSoft)
-                }
-                if (voice.available) {
-                    Text(if (playingId == voice.capsuleId) "멈추기" else "들어보기", style = MaterialTheme.typography.labelLarge, color = DoranPalette.Accent)
-                }
-            }
+        projection.endLabels(ui.route).forEach { (text, point) ->
+            val p = projection.ground(point.first, point.second, size.width, size.height, k)
+            val label = measurer.measure(text, TextStyle(fontFamily = Suit, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = DoranPalette.InkSoft))
+            val padX = 8.dp.toPx()
+            val tl = Offset(p.x - label.size.width / 2f - padX, p.y + 14.dp.toPx())
+            drawRoundRect(DoranPalette.Background.copy(alpha = 0.9f), topLeft = tl, size = Size(label.size.width + padX * 2, label.size.height + 4.dp.toPx()), cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx()))
+            drawText(label, topLeft = Offset(tl.x + padX, tl.y + 2.dp.toPx()))
         }
     }
 }
