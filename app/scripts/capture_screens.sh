@@ -37,8 +37,10 @@ adb shell am start -W -n $PKG/.MainActivity > /dev/null
 sleep 5
 
 shot 01_처음설정 12
+go --es screen night
+shot 02_처음설정_밤 3
 
-sleep 10
+sleep 8
 go --es gear D --es mood idle --es caption -
 shot 10_주행_대기 4
 go --es mood listening --es caption "'휴게소 어디야'"
@@ -49,19 +51,26 @@ go --es mood speaking --es caption "'다음 휴게소는 하남드림이야. 12k
 shot 13_주행_말하는중 2
 go --es mood happy --es caption "'하남드림 휴게소를 경유지로 넣었어'"
 shot 14_주행_기쁨 2
-go --es mood none --es gear P --es onboarded yes --es route home --es demo tape --es caption -
+go --es mood none --es gear P --es onboarded yes --es route home --es demo tape --es caption - --es battery 78 --es seats 3
 shot 15_정차_홈
 go --es say "'근처 맛집 추천해 줘'"
 shot 16_정차_제안카드 6
 go --es say "'휴게소 어디야'"
 shot 17_정차_휴게소카드 6
+go --es battery 15
+shot 17b_정차_배터리낮음 2
+go --es battery 78
 go --es detour "'하남드림 휴게소'" --es caption "'하남드림 휴게소를 경유지로 넣었어'"
 shot 18_정차_경유지 4
 go --es screen day
 shot 19_정차_낮 3
 go --es gear D --es mood speaking --es caption "'하남드림까지 12km 남았어'"
 shot 19b_주행_낮 3
-go --es gear P --es mood none --es screen night --es caption -
+go --es gear P --es mood none --es wiper on --es caption -
+shot 19c_정차_낮_비 3
+go --es screen night
+shot 19d_정차_밤_비 3
+go --es wiper off --es caption -
 sleep 2
 
 go --es route record
@@ -72,11 +81,29 @@ sleep 1
 
 go --es route music
 shot 30_음악 6
+go --es play life-of-riley
+shot 31_음악_재생중 3
+go --es screen day
+shot 32_음악_낮 3
+go --es screen night
 go --es route home
 sleep 1
 
+# 앨범은 여행이 없을 때, 하나일 때, 여럿일 때를 차례로 찍는다. 기록은 시연용 값이다(seed_album.py)
 go --es route album
-shot 40_앨범 4
+shot 42_앨범_빈상태 4
+go --es route home
+python3 scripts/seed_album.py demo-trip-1 || true
+go --es route album
+shot 43_앨범_여행하나 5
+go --es route home
+python3 scripts/seed_album.py demo-trip-2 || true
+python3 scripts/seed_album.py demo-trip-3 || true
+go --es route album
+shot 40_앨범 5
+go --es screen day
+shot 40b_앨범_낮 3
+go --es screen night
 go --es route "albummap:demo-trip-1"
 shot 41_3D지도앨범 6
 adb shell input keyevent KEYCODE_BACK

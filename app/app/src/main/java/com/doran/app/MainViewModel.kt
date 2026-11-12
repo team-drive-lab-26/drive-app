@@ -10,6 +10,7 @@ import com.doran.app.core.data.NaviState
 import com.doran.app.core.data.PleosNavi
 import com.doran.app.core.data.VehicleStateSource
 import com.doran.app.core.designsystem.DoranMood
+import com.doran.app.core.media.LocalTrack
 import com.doran.app.core.media.MusicPlayer
 import com.doran.app.core.model.Gear
 import com.doran.app.core.model.VehicleState
@@ -33,6 +34,9 @@ data class LocalUiState(
     val forcedMood: DoranMood? = null,
     val requestedRoute: String? = null,
     val nowPlaying: String? = null,
+    val musicPaused: Boolean = false,
+    /** 기기에 넣어 둔 곡 전체. 음악 화면의 다른 곡 목록 */
+    val library: List<LocalTrack> = emptyList(),
 )
 
 data class MainUiState(
@@ -76,6 +80,9 @@ data class MainUiState(
             }
         }
 
+    /** 남은 시간만. 정차 화면 위 막대에 크게 쓴다 */
+    val etaText: String get() = etaMinutes?.let(::formatMinutes) ?: ""
+
     /** 도착 예정 시각. 위 막대 아래 줄과 지평선 표지판에 쓴다 */
     val arrivalClock: String
         get() = etaMinutes?.let { java.time.LocalTime.now(java.time.ZoneId.of("Asia/Seoul")).plusMinutes(it.toLong()).format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) } ?: ""
@@ -86,15 +93,17 @@ private fun formatMinutes(minutes: Int): String =
 
 class MainViewModel(
     private val coordinator: TripCoordinator,
-    vehicle: VehicleStateSource,
+    private val vehicle: VehicleStateSource,
     navi: PleosNavi,
     voice: DoranVoice,
-    music: MusicPlayer,
+    private val music: MusicPlayer,
 ) : ViewModel() {
     private val local = MutableStateFlow(LocalUiState())
 
     init {
         viewModelScope.launch { music.nowPlaying.collect { id -> local.update { it.copy(nowPlaying = id) } } }
+        viewModelScope.launch { music.paused.collect { paused -> local.update { it.copy(musicPaused = paused) } } }
+        viewModelScope.launch { music.library.collect { list -> local.update { it.copy(library = list) } } }
     }
 
     val uiState: StateFlow<MainUiState> = combine(
@@ -125,6 +134,21 @@ class MainViewModel(
     fun showDebugDetour(name: String) = coordinator.showDebugDetour(name)
     fun overrideGear(gear: Gear) = coordinator.overrideGear(gear)
     fun overrideDoorOpen(open: Boolean) = coordinator.overrideDoorOpen(open)
+
+    /** 디버그용. 값이 null이면 그대로 두고, "-"면 지운다 */
+    fun overrideVehicleExtras(battery: String?, seats: String?, wiper: String?) =
+        vehicle.overrideExtras { state ->
+            state.copy(
+                batteryPercent = if (battery == null) state.batteryPercent else battery.toIntOrNull(),
+                buckledSeats = if (seats == null) state.buckledSeats else seats.toIntOrNull(),
+                isWiperOn = if (wiper == null) state.isWiperOn else wiper == "on",
+            )
+        }
+
+    // 음악 화면에서 누른 곡은 서버를 거치지 않고 바로 튼다
+    fun playTrack(trackId: String) = music.play(trackId)
+    fun pauseMusic() = music.pause()
+    fun resumeMusic() = music.resume()
 
     fun chooseCard(card: AgentCard) = coordinator.chooseCard(card)
     fun dismissCards() = coordinator.dismissCards()

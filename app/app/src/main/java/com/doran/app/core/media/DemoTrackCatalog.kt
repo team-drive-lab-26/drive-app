@@ -6,6 +6,9 @@ import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 
+/** 기기에 넣어 둔 곡 하나. 제목·아티스트는 음원 파일 태그에서 읽는다 */
+data class LocalTrack(val id: String, val title: String, val artist: String)
+
 /**
  * 앱에 넣어 둔 시연용 음원. 파일 이름이 서버 곡 목록의 track_id와 같아야 한다.
  * 예: assets/music/demo-track-1.mp3 ↔ tracks.json의 "demo-track-1"
@@ -17,6 +20,12 @@ class DemoTrackCatalog(private val context: Context) {
             .filter { name -> EXTENSIONS.any { name.endsWith(it) } }
             .map { it.substringBeforeLast('.') }
             .sorted()
+
+    /** 넣어 둔 곡 전체. 파일마다 태그를 읽으므로 메인 스레드에서 부르지 않는다 */
+    fun tracks(): List<LocalTrack> = ids().map { id ->
+        val tags = fileName(id)?.let(::readTags) ?: (null to null)
+        LocalTrack(id, tags.first?.takeIf { it.isNotBlank() } ?: id, tags.second.orEmpty())
+    }
 
     fun has(trackId: String): Boolean = fileName(trackId) != null
 

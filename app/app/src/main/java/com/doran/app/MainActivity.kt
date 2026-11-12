@@ -62,6 +62,9 @@ class MainActivity : ComponentActivity() {
             onChooseCard = viewModel::chooseCard,
             onDismissCards = viewModel::dismissCards,
             onRequestMusic = viewModel::requestMusic,
+            onPlayLocal = viewModel::playTrack,
+            onPauseMusic = viewModel::pauseMusic,
+            onResumeMusic = viewModel::resumeMusic,
             currentSessionId = (application as DoranApplication).container.tripCoordinator.sessionId,
         )
         setContent {
@@ -70,6 +73,7 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(isDay) { DoranPalette.isDay = isDay }
             DoranTheme {
                 val ui by viewModel.uiState.collectAsStateWithLifecycle()
+                LaunchedEffect(ui.vehicle.isWiperOn) { DoranPalette.isWet = ui.vehicle.isWiperOn == true }
                 Column(Modifier.fillMaxSize().background(DoranPalette.Background)) {
                     Box(Modifier.weight(1f)) {
                         DoranNavHost(ui = ui, actions = actions, onboarded = onboarded)
@@ -119,6 +123,15 @@ class MainActivity : ComponentActivity() {
         if (intent.getStringExtra("demo") == "tape") viewModel.seedDemoTape()
         intent.getStringExtra("screen")?.let { mode -> preferences.update { it.copy(screen = mode) } }
         intent.getStringExtra("detour")?.let(viewModel::showDebugDetour)
+        // 차량 서비스가 없는 에뮬레이터에서 배터리·탑승 인원·와이퍼를 흉내 낸다. "-"면 값을 지운다
+        if (intent.hasExtra("battery") || intent.hasExtra("seats") || intent.hasExtra("wiper")) {
+            viewModel.overrideVehicleExtras(
+                battery = intent.getStringExtra("battery"),
+                seats = intent.getStringExtra("seats"),
+                wiper = intent.getStringExtra("wiper"),
+            )
+        }
+        intent.getStringExtra("play")?.let(viewModel::playTrack)
         intent.getStringExtra("caption")?.let { viewModel.showDebugCaption(if (it == "-") "" else it) }
     }
 
