@@ -32,6 +32,7 @@ class DoranActions(
     val onRouteHandled: () -> Unit,
     val onChooseCard: (AgentCard) -> Unit,
     val onDismissCards: () -> Unit,
+    val onAnswerRecord: (Boolean) -> Unit,
     val onRequestMusic: () -> Unit,
     val onPlayLocal: (String) -> Unit,
     val onPauseMusic: () -> Unit,
@@ -110,6 +111,9 @@ fun DoranNavHost(ui: MainUiState, actions: DoranActions, onboarded: Boolean) {
                 onLongPress = actions.onToggleDebug,
                 onChoose = actions.onChooseCard,
                 onDismissCards = actions.onDismissCards,
+                askingRecord = ui.conversation.askingRecord,
+                stoppedAt = ui.conversation.lastPlaceName,
+                onAnswerRecord = actions.onAnswerRecord,
             )
         }
         composable<Route.Settings> { SettingsScreen(onBack = { nav.popBackStack() }) }

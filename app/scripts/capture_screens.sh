@@ -30,6 +30,17 @@ go() {
   adb shell am start -n $PKG/.MainActivity "$@" > /dev/null
 }
 
+# 화면에서 글자를 찾아 그 자리를 누른다. 예: tap_text "기록 6개"
+tap_text() {
+  adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1
+  local box
+  box=$(adb exec-out cat /sdcard/ui.xml | tr '>' '\n' | grep -F "$1" | head -1 \
+    | sed -n 's/.*bounds="\[\([0-9]*\),\([0-9]*\)\]\[\([0-9]*\),\([0-9]*\)\]".*/\1 \2 \3 \4/p')
+  if [ -z "$box" ]; then echo "못 찾음: $1"; return 1; fi
+  set -- $box
+  adb shell input tap $(( ($1 + $3) / 2 )) $(( ($2 + $4) / 2 ))
+}
+
 adb shell settings put global hide_error_dialogs 1 || true
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb shell pm grant $PKG android.permission.RECORD_AUDIO || true
@@ -93,14 +104,16 @@ sleep 1
 go --es route album
 shot 42_앨범_빈상태 4
 go --es route home
-python3 scripts/seed_album.py demo-trip-1 || true
+python3 scripts/seed_album.py demo-trip-1 --backdate || true
 go --es route album
 shot 43_앨범_여행하나 5
 go --es route home
-python3 scripts/seed_album.py demo-trip-2 || true
-python3 scripts/seed_album.py demo-trip-3 || true
+python3 scripts/seed_album.py demo-trip-2 --backdate || true
+python3 scripts/seed_album.py demo-trip-3 --backdate || true
 go --es route album
 shot 40_앨범 5
+# 다른 여행 표지판을 고른 장면. 40일 전 여행(기록 6개)
+tap_text "기록 6개" && shot 40c_앨범_다른여행 3
 go --es screen day
 shot 40b_앨범_낮 3
 go --es screen night
@@ -115,5 +128,29 @@ go --es screen day
 shot 51_설정_낮 2
 go --es screen night
 adb shell input keyevent KEYCODE_BACK
+
+# 시연 흐름(docs/app/README.md '시연 범위' 순서): 주행 중 휴게소 제안 → 경유지 → 도착해 세우면 "한마디 남길래?" → 녹음 → 다시 타면 재탑승 제안
+go --es route home --es caption -
+go --es gear D --es caption -
+sleep 3
+go --es event continuous_drive
+shot 60_시연_주행_휴게소제안 8
+go --es detour "'하남드림 휴게소'" --es caption "'하남드림 휴게소를 경유지로 넣었어'"
+shot 61_시연_주행_경유지 3
+go --es arrive -
+shot 62_시연_도착_한마디 6
+go --es screen day
+shot 62b_시연_도착_한마디_낮 3
+go --es screen night
+go --es say "'응'"
+shot 63_시연_녹음 4
+adb shell input keyevent KEYCODE_BACK
+go --es route home --es caption -
+sleep 2
+go --es event reboarded
+shot 64_시연_재탑승제안 10
+go --es screen day
+shot 64b_시연_재탑승제안_낮 3
+go --es screen night
 
 exit 0

@@ -153,6 +153,7 @@ class MainViewModel(
 
     fun chooseCard(card: AgentCard) = coordinator.chooseCard(card)
     fun dismissCards() = coordinator.dismissCards()
+    fun answerRecord(yes: Boolean) = coordinator.answerRecord(yes)
     fun requestMusic() = coordinator.requestMusic()
     fun toggleDebug() = local.update { it.copy(showDebug = !it.showDebug) }
     fun setDebugVisible(visible: Boolean) = local.update { it.copy(showDebug = visible) }
