@@ -459,7 +459,8 @@ class TripCoordinator(
     private fun recordStop(stop: TripTrigger.Stopped) {
         val id = waypointIds[stop.placeName] ?: "navi-${stop.placeName.take(100)}"
         log("정차 기록: ${stop.placeName}")
-        _state.update { it.copy(lastPlaceName = stop.placeName) }
+        // 도착한 곳은 이제 앞길이 아니다. 앞길 표지판에서 뺀다
+        _state.update { it.copy(lastPlaceName = stop.placeName, ahead = it.ahead.filterNot { a -> a.name == stop.placeName }) }
         addMark(TapeKind.STOP, stop.placeName)
         if (_state.value.detour == stop.placeName) _state.update { it.copy(detour = "") }
         // 들른 곳에서 목소리를 남기자고 먼저 묻는다. 답은 호출어 없이 바로 듣는다
@@ -630,7 +631,8 @@ class TripCoordinator(
         )
     }
 
-    private fun clockAfter(minutes: Int): String = LocalTime.now().plusMinutes(minutes.toLong()).format(HH_MM)
+    // 기기 시간대와 상관없이 서버에는 한국 시각을 보낸다
+    private fun clockAfter(minutes: Int): String = LocalTime.now(KST).plusMinutes(minutes.toLong()).format(HH_MM)
 
     private fun setCaption(text: String) = _state.update { it.copy(caption = text) }
 

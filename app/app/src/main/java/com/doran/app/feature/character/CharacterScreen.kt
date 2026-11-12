@@ -78,7 +78,8 @@ fun CharacterScreen(
     stoppedAt: String = "",
     onAnswerRecord: (Boolean) -> Unit = {},
 ) {
-    val shown = cards.take(2)
+    // 곡 추천은 음악 화면 몫이다. 길가 표지판으로 세우지 않는다
+    val shown = cards.filterNot { it.isTrack }.take(2)
     // 제안 카드가 먼저 떠 있으면 그쪽을 보인다. 둘이 겹치지 않게 한다
     val asking = askingRecord && shown.isEmpty() && stoppedAt.isNotBlank()
     val cardNames = shown.map { it.name }.toSet()

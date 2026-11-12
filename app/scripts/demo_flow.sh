@@ -44,12 +44,18 @@ shot() {
 
 # 화면 접근성 트리에서 글자(또는 설명)를 찾아 그 자리를 누른다. 예: tap 'text="남길래"'
 tap() {
-  adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1
-  local box
-  box=$(adb exec-out cat /sdcard/ui.xml | tr '>' '\n' | grep -F "$1" | head -1 \
-    | sed -n 's/.*bounds="\[\([0-9]*\),\([0-9]*\)\]\[\([0-9]*\),\([0-9]*\)\]".*/\1 \2 \3 \4/p')
+  local box="" try msg=""
+  # 도란이 계속 움직여 접근성 트리를 한 번에 못 뜰 때가 있어 세 번까지 다시 뜬다
+  for try in 1 2 3; do
+    adb shell rm -f /sdcard/ui.xml > /dev/null 2>&1
+    msg=$(adb shell uiautomator dump /sdcard/ui.xml 2>&1 | tr -d '\r')
+    box=$(adb exec-out cat /sdcard/ui.xml 2>/dev/null | tr '>' '\n' | grep -F "$1" | head -1 \
+      | sed -n 's/.*bounds="\[\([0-9]*\),\([0-9]*\)\]\[\([0-9]*\),\([0-9]*\)\]".*/\1 \2 \3 \4/p')
+    [ -n "$box" ] && break
+    sleep 2
+  done
   if [ -z "$box" ]; then
-    note "  못 찾음: $1"
+    note "  못 찾음: $1 (uiautomator: $msg)"
     return 1
   fi
   set -- $box

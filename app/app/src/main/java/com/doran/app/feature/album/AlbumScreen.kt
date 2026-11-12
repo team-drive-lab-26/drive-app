@@ -74,7 +74,8 @@ fun AlbumScreen(
                 RoadSign(
                     id = trip.sessionId,
                     title = trip.title,
-                    sub = if (trip.isCurrent) "지금 여행 · ${trip.detail}" else trip.detail,
+                    // 지금 여행은 자세한 기록이 옆 패널에 있으니 표지판은 짧게
+                    sub = if (trip.isCurrent) "지금 여행" else trip.detail,
                     depth = DEPTHS[i],
                     side = RoadSide.LEFT,
                     hot = trip.isCurrent,
