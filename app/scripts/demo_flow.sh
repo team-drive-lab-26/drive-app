@@ -72,6 +72,13 @@ tap_or() {
 
 adb shell settings put global hide_error_dialogs 1 || true
 adb install -r app/build/outputs/apk/debug/app-debug.apk
+# 막 부팅한 CI 에뮬레이터는 시스템 앱들이 한동안 화면을 붙잡고 있다. 그때 앱을 켜면 시스템 전체가 버벅여
+# 앱과 상관없이 "응답 없음"이 난다. 시스템이 가라앉을 때까지 기다린 뒤 시작한다
+for i in $(seq 30); do
+  [ "$(adb shell getprop sys.boot_completed | tr -d '')" = 1 ] && break
+  sleep 2
+done
+sleep 30
 adb shell pm clear $PKG > /dev/null
 adb shell pm grant $PKG android.permission.RECORD_AUDIO || true
 adb logcat -c
@@ -173,6 +180,12 @@ go --es arrive "'강문해변'"
 shot 74_서버꺼짐_도착 6
 
 adb logcat -d > "$OUT/logcat.txt"
+# 응답 없음이 났으면 그때 스레드 상태를 남긴다(google_apis 에뮬레이터는 root로 읽을 수 있다)
+if [ "$FAIL" != 0 ]; then
+  adb root > /dev/null 2>&1
+  sleep 3
+  adb pull /data/anr "$OUT/anr" > /dev/null 2>&1 || true
+fi
 if adb logcat -d -b crash | grep -q "$PKG"; then
   note "!! 크래시 로그 있음"
   adb logcat -d -b crash > "$OUT/crash.txt"
