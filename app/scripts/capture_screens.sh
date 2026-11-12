@@ -69,7 +69,7 @@ go --es route home
 shot 15_정차_홈
 go --es say "'근처 맛집 추천해 줘'"
 shot 16_정차_제안카드 6
-go --es say "'가볼 만한 곳 추천해 줘'"
+go --es say "'경포호수 근처 뭐 있어?'"
 shot 16b_정차_제안카드_사진 8
 go --es say "'휴게소 어디야'"
 shot 17_정차_휴게소카드 6

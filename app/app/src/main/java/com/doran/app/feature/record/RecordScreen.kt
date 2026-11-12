@@ -26,6 +26,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.heightIn
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.doran.app.core.designsystem.DoranCharacter
@@ -101,7 +103,7 @@ fun RecordScreen(onClose: () -> Unit, viewModel: RecordViewModel = viewModel(fac
         Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(start = 48.dp, end = 48.dp, bottom = 40.dp)) {
             when (ui.phase) {
                 RecordPhase.RECORDING -> {
-                    DoranPrimaryButton(text = "다 했어", onClick = viewModel::finishRecording)
+                    DoranPrimaryButton(text = "다 했어", onClick = viewModel::finishRecording, modifier = Modifier.heightIn(min = 76.dp).width(220.dp))
                     // 되돌릴 수 없는 동작은 주 동작과 떨어뜨려 오른쪽 끝에 둔다
                     DoranSecondaryButton(text = "그만둘래", onClick = viewModel::cancel, modifier = Modifier.align(Alignment.CenterEnd))
                 }
@@ -118,9 +120,10 @@ fun RecordScreen(onClose: () -> Unit, viewModel: RecordViewModel = viewModel(fac
 
 @Composable
 private fun Heading(title: String, body: String) {
-    Text(title, style = MaterialTheme.typography.headlineLarge, color = DoranPalette.Ink)
-    Spacer(Modifier.height(8.dp))
-    Text(body, style = MaterialTheme.typography.bodyLarge, color = DoranPalette.InkSoft)
+    // 정차 화면과 같은 크기로 2m 떨어진 뒷자리에서도 읽히게 한다
+    Text(title, style = DoranText.say, color = DoranPalette.Ink)
+    Spacer(Modifier.height(10.dp))
+    Text(body, style = MaterialTheme.typography.bodyLarge.copy(fontSize = 24.sp, lineHeight = 34.sp), color = DoranPalette.InkSoft)
 }
 
 @OptIn(ExperimentalLayoutApi::class)
