@@ -50,7 +50,9 @@ jobs:
           arch: x86_64
           profile: pixel_c
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          # 호스트로 GL 명령을 넘기는 swiftshader_indirect는 셰이더를 만들 때마다 앱 화면 스레드가 몇 초씩 묶여
+          # 첫 화면에서 "응답 없음"이 나곤 했다. 에뮬레이터 안에서 바로 그리는 guest로 돌린다
+          emulator-options: -no-window -gpu guest -noaudio -no-boot-anim
           working-directory: app
           script: bash scripts/demo_flow.sh demo
       - uses: actions/upload-artifact@v4
