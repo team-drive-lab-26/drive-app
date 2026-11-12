@@ -51,8 +51,10 @@ import com.doran.app.core.designsystem.panel
 // 길가에 세울 여행 수. 더 오래된 여행은 지평선 너머로 넘긴다
 private const val MAX_SIGNS = 6
 
-// 표지판 깊이. 모두 왼쪽 길가(오른쪽은 패널)에 서므로 판이 겹치지 않게 멀수록 간격을 벌린다
-private val DEPTHS = listOf(0.07f, 0.30f, 0.75f, 0.86f, 0.92f, 0.95f)
+// 표지판 깊이와 길가. 가까운 오른쪽 길가는 패널에 가려서 가까운 두 곳은 왼쪽에 세우고,
+// 지평선 쪽(패널에 안 가리는 곳)부터 양쪽에 번갈아 세워 판이 겹치지 않게 한다
+private val DEPTHS = listOf(0.07f, 0.30f, 0.78f, 0.80f, 0.90f, 0.92f)
+private val SIDES = listOf(RoadSide.LEFT, RoadSide.LEFT, RoadSide.RIGHT, RoadSide.LEFT, RoadSide.RIGHT, RoadSide.LEFT)
 
 /**
  * 다녀온 여행 목록. 정차 홈의 앞길을 뒤로 돌린 '지나온 길'이다.
@@ -77,7 +79,7 @@ fun AlbumScreen(
                     // 지금 여행은 자세한 기록이 옆 패널에 있으니 표지판은 짧게
                     sub = if (trip.isCurrent) "지금 여행" else trip.detail,
                     depth = DEPTHS[i],
-                    side = RoadSide.LEFT,
+                    side = SIDES[i],
                     hot = trip.isCurrent,
                     selected = trip.sessionId == ui.selectedId,
                 ),
@@ -85,7 +87,7 @@ fun AlbumScreen(
         }
         if (!ui.loading && trips.size < 3) {
             val i = trips.size
-            add(RoadSign("next", "다음 여행", "출발하면 여기 서", DEPTHS[i], RoadSide.LEFT, ghost = true))
+            add(RoadSign("next", "다음 여행", "출발하면 여기 서", DEPTHS[i], SIDES[i], ghost = true))
         }
     }
     Box(Modifier.fillMaxSize().background(DoranPalette.Background)) {
