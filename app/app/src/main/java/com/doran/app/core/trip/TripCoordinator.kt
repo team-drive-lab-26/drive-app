@@ -151,7 +151,12 @@ class TripCoordinator(
         voice.listen { result ->
             _state.update { it.copy(isAwake = false) }
             when (result) {
-                is ListenResult.Heard -> submitUtterance(result.text)
+                // 듣는 중에 다시 "도란아"라고 불렀으면 호출어는 떼고 요청만 보낸다
+                is ListenResult.Heard -> when (val match = WakeWord.match(result.text)) {
+                    WakeMatch.CallOnly -> say("응?", onDone = ::listen)
+                    is WakeMatch.Command -> submitUtterance(match.text)
+                    WakeMatch.None -> submitUtterance(result.text)
+                }
                 ListenResult.NothingHeard -> {
                     setCaption("다시 말해 줘")
                     scheduleStandby()

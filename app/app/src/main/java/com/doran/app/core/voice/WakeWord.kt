@@ -19,6 +19,7 @@ object WakeWord {
     // 받아 적기 결과에 따라 추가한다. 일반 단어와 겹치는 표기(토란 등)는 넣지 않는다
     private val NAMES = listOf("도란", "또란", "도랑", "두란")
     private val SUFFIXES = listOf("아", "야", "이", "님")
+    private const val CALL = "도란아"
 
     // 호출어 앞에 "어", "저기" 같은 말이 붙어도 인정하되, 문장 중간의 "도란"은 부른 것으로 보지 않는다
     private const val MAX_LEADING_CHARS = 4
@@ -32,6 +33,13 @@ object WakeWord {
     fun match(text: String): WakeMatch {
         val heard = text.trim()
         return matchWritten(heard) ?: matchSpoken(heard) ?: WakeMatch.None
+    }
+
+    /** 화면에 보일 문장. 소리 나는 대로 적힌 호출어("돌아나")를 "도란아"로 바꾼다 */
+    fun display(text: String): String = when (val match = match(text)) {
+        WakeMatch.None -> text
+        WakeMatch.CallOnly -> CALL
+        is WakeMatch.Command -> "$CALL ${match.text}"
     }
 
     private fun matchWritten(heard: String): WakeMatch? {

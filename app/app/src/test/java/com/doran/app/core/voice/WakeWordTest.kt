@@ -46,6 +46,14 @@ class WakeWordTest {
     }
 
     @Test
+    fun showsCallAsDoran() {
+        assertEquals("도란아", WakeWord.display("돌아나"))
+        assertEquals("도란아 근처 휴게소 있어", WakeWord.display("돌아나 근처 휴게소 있어"))
+        assertEquals("돌아나가자", WakeWord.display("돌아나가자"))
+        assertEquals("휴게소 어디야", WakeWord.display("휴게소 어디야"))
+    }
+
+    @Test
     fun keepsWordStartingLikeSuffix() {
         assertEquals(WakeMatch.Command("이거 틀어 줘"), WakeWord.match("도란 이거 틀어 줘"))
     }
