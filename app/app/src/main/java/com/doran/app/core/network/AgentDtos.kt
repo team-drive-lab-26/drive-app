@@ -29,6 +29,10 @@ data class VehicleDto(
     @SerialName("doors_closed") val doorsClosed: Boolean? = null,
     @SerialName("last_stop_minutes") val lastStopMinutes: Int? = null,
     @SerialName("continuous_driving_minutes") val continuousDrivingMinutes: Int? = null,
+    @SerialName("battery_percent") val batteryPercent: Int? = null,
+    @SerialName("passenger_count") val passengerCount: Int? = null,
+    @SerialName("wiper_on") val wiperOn: Boolean? = null,
+    @SerialName("headlight_on") val headlightOn: Boolean? = null,
 )
 
 @Serializable

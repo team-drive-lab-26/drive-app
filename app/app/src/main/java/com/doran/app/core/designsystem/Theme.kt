@@ -24,7 +24,7 @@ import com.doran.app.R
  * 색은 도란(주황 빛)과 경로선, 지금 고를 것에만 쓴다. 가족 목소리 핀은 사람마다 정한 색.
  */
 object DoranPalette {
-    /** 낮 화면인지. MainActivity가 설정(자동·낮·밤)과 시각으로 정한다 */
+    /** 낮 화면인지. DaylightSource가 정한 값을 MainActivity가 넣는다 */
     var isDay by mutableStateOf(false)
 
     private fun pick(night: Long, day: Long) = Color(if (isDay) day else night)

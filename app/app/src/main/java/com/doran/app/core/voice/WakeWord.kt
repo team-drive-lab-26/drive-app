@@ -19,17 +19,38 @@ object WakeWord {
     // 받아 적기 결과에 따라 추가한다. 일반 단어와 겹치는 표기(토란 등)는 넣지 않는다
     private val NAMES = listOf("도란", "또란", "도랑", "두란")
     private val SUFFIXES = listOf("아", "야", "이", "님")
+    private const val CALL = "도란아"
 
     // 호출어 앞에 "어", "저기" 같은 말이 붙어도 인정하되, 문장 중간의 "도란"은 부른 것으로 보지 않는다
     private const val MAX_LEADING_CHARS = 4
     private val SEPARATORS = Regex("^[\\s,.!?~·…]+")
 
+    // Pleos 음성 인식은 "도란아"를 "도라나", "또래나"처럼 소리 나는 대로 받아 적는다(에뮬레이터에서 확인).
+    // 표기가 맞지 않으면 앞쪽 낱말을 자음·모음으로 풀어 소리가 가까운지 본다. 낱말 단위로 보므로 "돌아나가자"는 부른 것이 아니다
+    private val SPOKEN_TARGETS = mapOf("도란아" to 1.0, "도란야" to 1.0, "도란" to 0.25)
+    private val WORD = Regex("[^\\s,.!?~·…]+")
+
+    // 세 글자 낱말 하나만 말했으면 더 느슨하게 본다(에뮬레이터에서 "도란아"가 "드라마", "그러나"로 적혔다).
+    // 잘못 깨어나도 "응?" 하고 끝나므로, 뒤에 말이 이어질 때보다 덜 엄격해도 된다
+    private const val LONE_CALL_LIMIT = 2.5
+
     fun match(text: String): WakeMatch {
         val heard = text.trim()
+        return matchWritten(heard) ?: matchSpoken(heard) ?: WakeMatch.None
+    }
+
+    /** 화면에 보일 문장. 소리 나는 대로 적힌 호출어("돌아나")를 "도란아"로 바꾼다 */
+    fun display(text: String): String = when (val match = match(text)) {
+        WakeMatch.None -> text
+        WakeMatch.CallOnly -> CALL
+        is WakeMatch.Command -> "$CALL ${match.text}"
+    }
+
+    private fun matchWritten(heard: String): WakeMatch? {
         val (start, name) = NAMES
             .mapNotNull { name -> heard.indexOf(name).takeIf { it >= 0 }?.let { it to name } }
-            .minByOrNull { it.first } ?: return WakeMatch.None
-        if (heard.substring(0, start).count { !it.isWhitespace() } > MAX_LEADING_CHARS) return WakeMatch.None
+            .minByOrNull { it.first } ?: return null
+        if (leadingChars(heard, start) > MAX_LEADING_CHARS) return null
 
         var rest = heard.substring(start + name.length)
         // "도란도란"처럼 겹쳐 받아 적힌 경우
@@ -42,7 +63,32 @@ object WakeWord {
         SUFFIXES.firstOrNull { suffix ->
             rest.startsWith(suffix) && (rest.length == suffix.length || SEPARATORS.containsMatchIn(rest.substring(suffix.length)))
         }?.let { rest = rest.removePrefix(it) }
-        rest = rest.replace(SEPARATORS, "").trim()
-        return if (rest.isEmpty()) WakeMatch.CallOnly else WakeMatch.Command(rest)
+        return afterCall(rest)
     }
+
+    // 앞쪽 낱말 하나 또는 붙은 두 낱말("돌 아나")을 호출어와 견줘 가장 가까운 것을 고른다
+    private fun matchSpoken(heard: String): WakeMatch? {
+        val words = WORD.findAll(heard).toList()
+        val lone = words.singleOrNull()?.value
+        if (lone != null && lone.count { it in '가'..'힣' } == CALL.length && JamoDistance.between(lone, CALL) <= LONE_CALL_LIMIT) {
+            return WakeMatch.CallOnly
+        }
+        val best = words.indices
+            .takeWhile { leadingChars(heard, words[it].range.first) <= MAX_LEADING_CHARS }
+            .flatMap { i -> listOfNotNull(i..i, (i..i + 1).takeIf { i + 1 < words.size }) }
+            .mapNotNull { span ->
+                val spoken = span.joinToString("") { words[it].value }
+                val score = SPOKEN_TARGETS.minOf { (target, limit) -> JamoDistance.between(spoken, target) - limit }
+                (words[span.last].range.last + 1 to score).takeIf { score <= 0.0 }
+            }
+            .minByOrNull { it.second } ?: return null
+        return afterCall(heard.substring(best.first))
+    }
+
+    private fun afterCall(rest: String): WakeMatch {
+        val command = rest.replace(SEPARATORS, "").trim()
+        return if (command.isEmpty()) WakeMatch.CallOnly else WakeMatch.Command(command)
+    }
+
+    private fun leadingChars(heard: String, end: Int) = heard.substring(0, end).count { !it.isWhitespace() }
 }

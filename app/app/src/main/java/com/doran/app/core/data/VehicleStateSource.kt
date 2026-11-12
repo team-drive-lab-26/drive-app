@@ -2,10 +2,20 @@ package com.doran.app.core.data
 
 import ai.pleos.playground.vehicle.Vehicle
 import ai.pleos.playground.vehicle.api.model.area.DoorArea
+import ai.pleos.playground.vehicle.api.model.area.SeatArea
+import ai.pleos.playground.vehicle.api.model.area.WindowArea
 import ai.pleos.playground.vehicle.constant.area.DoorValue
+import ai.pleos.playground.vehicle.constant.area.SeatValue
+import ai.pleos.playground.vehicle.constant.area.WindowValue
+import ai.pleos.playground.vehicle.constant.control.LightState
 import ai.pleos.playground.vehicle.constant.control.VehicleGear
+import ai.pleos.playground.vehicle.constant.control.WiperState
 import ai.pleos.playground.vehicle.listener.DoorPositionListener
+import ai.pleos.playground.vehicle.listener.EvBatteryStateOfChargeListener
 import ai.pleos.playground.vehicle.listener.GearSelectionListener
+import ai.pleos.playground.vehicle.listener.LightStateListener
+import ai.pleos.playground.vehicle.listener.SeatBeltBuckledStateListener
+import ai.pleos.playground.vehicle.listener.WiperStateListener
 import android.content.Context
 import android.util.Log
 import com.doran.app.core.model.Gear
@@ -35,7 +45,7 @@ class FakeVehicleStateSource : VehicleStateSource {
     override fun overrideDoorOpen(open: Boolean) = _state.update { it.copy(isAnyDoorOpen = open) }
 }
 
-/** Pleos Vehicle SDK에서 기어와 문 열림을 받는다. 연결에 실패하면 디버그 값만 남는다 */
+/** Pleos Vehicle SDK에서 기어, 문 열림, 배터리, 안전벨트, 와이퍼, 전조등을 받는다. 연결에 실패하면 디버그 값만 남는다 */
 class PleosVehicleStateSource(context: Context) : VehicleStateSource {
     private val vehicle = Vehicle(context.applicationContext)
     private val _state = MutableStateFlow(VehicleState())
@@ -44,7 +54,40 @@ class PleosVehicleStateSource(context: Context) : VehicleStateSource {
     // 문마다 열린 정도(0이면 닫힘)를 따로 들고 하나라도 열려 있으면 열림으로 본다
     private val doorPositions = mutableMapOf<DoorValue, Int>()
     private val doorListeners = mutableMapOf<DoorValue, DoorPositionListener>()
+    private val buckled = mutableMapOf<SeatValue, Boolean>()
+    private val beltListeners = mutableMapOf<SeatValue, SeatBeltBuckledStateListener>()
     private var started = false
+
+    private val batteryListener = object : EvBatteryStateOfChargeListener {
+        override fun onEvBatteryStateOfChargeUpdated(percent: Int?) {
+            if (percent != null) _state.update { it.copy(batteryPercent = percent, isConnected = true) }
+        }
+
+        override fun onFailed(e: Exception) {
+            Log.w(TAG, "배터리 잔량을 받지 못함", e)
+        }
+    }
+
+    private val wiperListener = object : WiperStateListener {
+        override fun onWiperStateUpdated(state: WiperState?) {
+            if (state != null) _state.update { it.copy(isWiperOn = state == WiperState.ON) }
+        }
+
+        override fun onFailed(e: Exception) {
+            Log.w(TAG, "와이퍼 상태를 받지 못함", e)
+        }
+    }
+
+    private val headlightListener = object : LightStateListener {
+        // 주간주행등은 낮에도 켜져 있어 전조등을 켠 것으로 보지 않는다
+        override fun onLightStateUpdated(state: LightState?) {
+            if (state != null) _state.update { it.copy(isHeadlightOn = state == LightState.ON) }
+        }
+
+        override fun onFailed(e: Exception) {
+            Log.w(TAG, "전조등 상태를 받지 못함", e)
+        }
+    }
 
     private val gearListener = object : GearSelectionListener {
         override fun onSelected(gear: VehicleGear?) {
@@ -65,6 +108,7 @@ class PleosVehicleStateSource(context: Context) : VehicleStateSource {
             gearApi.registerGearSelection(gearListener)
             gearApi.getCurrentGearSelectionState({ gearListener.onSelected(it) }, {})
             PASSENGER_DOORS.forEach(::watchDoor)
+            watchExtras()
             started = true
         } catch (e: Exception) {
             // 차량 서비스가 없는 기기에서는 디버그 막대 값으로 시연한다
@@ -90,6 +134,55 @@ class PleosVehicleStateSource(context: Context) : VehicleStateSource {
         }
     }
 
+    // 차종마다 없는 값이 있어 하나씩 따로 등록하고, 실패한 것은 null로 둔다
+    private fun watchExtras() {
+        tryRegister("배터리") {
+            vehicle.getEvBattery().registerEvBatteryStateOfCharge(batteryListener)
+            vehicle.getEvBattery().getEvBatteryStateOfCharge({ batteryListener.onEvBatteryStateOfChargeUpdated(it) }, {})
+        }
+        tryRegister("와이퍼") {
+            val front = WindowArea(WindowValue.FRONT_WINDSHIELD)
+            vehicle.getWiper().registerWiperState(front, wiperListener)
+            vehicle.getWiper().getCurrentWiperState(front, { wiperListener.onWiperStateUpdated(it) }, {})
+        }
+        tryRegister("전조등") {
+            vehicle.getLight().registerLowBeamLightState(headlightListener)
+            vehicle.getLight().getCurrentLowBeamLightState({ headlightListener.onLightStateUpdated(it) }, {})
+        }
+        SEATS.forEach(::watchBelt)
+    }
+
+    private fun watchBelt(seat: SeatValue) {
+        val area = SeatArea(seat)
+        val listener = object : SeatBeltBuckledStateListener {
+            override fun onSeatBeltBuckledStateUpdated(isBuckled: Boolean?) = updateBelt(seat, isBuckled == true)
+            override fun onFailed(e: Exception) {
+                Log.w(TAG, "안전벨트 상태를 받지 못함: $seat", e)
+            }
+        }
+        tryRegister("안전벨트 $seat") {
+            vehicle.getSeat().registerSeatBeltBuckledState(area, listener)
+            vehicle.getSeat().getCurrentSeatBeltBuckledState(area, { updateBelt(seat, it == true) }, {})
+            beltListeners[seat] = listener
+        }
+    }
+
+    private fun updateBelt(seat: SeatValue, isBuckled: Boolean) {
+        val count = synchronized(buckled) {
+            buckled[seat] = isBuckled
+            buckled.values.count { it }
+        }
+        _state.update { it.copy(buckledSeats = count) }
+    }
+
+    private inline fun tryRegister(name: String, block: () -> Unit) {
+        try {
+            block()
+        } catch (e: Exception) {
+            Log.w(TAG, "$name 리스너 등록 실패", e)
+        }
+    }
+
     private fun updateDoor(door: DoorValue, position: Int) {
         synchronized(doorPositions) { doorPositions[door] = position }
         val open = synchronized(doorPositions) { doorPositions.values.any { it > 0 } }
@@ -104,16 +197,22 @@ class PleosVehicleStateSource(context: Context) : VehicleStateSource {
         try {
             vehicle.getGear().unregisterGearSelection(gearListener)
             doorListeners.forEach { (door, listener) -> vehicle.getDoor().unregisterDoorPosition(DoorArea(door), listener) }
+            beltListeners.forEach { (seat, listener) -> runCatching { vehicle.getSeat().unregisterSeatBeltBuckledState(SeatArea(seat), listener) } }
+            runCatching { vehicle.getEvBattery().unregisterEvBatteryStateOfCharge(batteryListener) }
+            runCatching { vehicle.getWiper().unregisterWiperState(WindowArea(WindowValue.FRONT_WINDSHIELD), wiperListener) }
+            runCatching { vehicle.getLight().unregisterLowBeamLightState(headlightListener) }
             vehicle.release()
         } catch (_: Exception) {
         }
         doorListeners.clear()
+        beltListeners.clear()
         started = false
     }
 
     private companion object {
         const val TAG = "DoranVehicle"
         val PASSENGER_DOORS = listOf(DoorValue.ROW_1_LEFT, DoorValue.ROW_1_RIGHT, DoorValue.ROW_2_LEFT, DoorValue.ROW_2_RIGHT)
+        val SEATS = listOf(SeatValue.ROW_1_LEFT, SeatValue.ROW_1_RIGHT, SeatValue.ROW_2_LEFT, SeatValue.ROW_2_CENTER, SeatValue.ROW_2_RIGHT)
     }
 }
 

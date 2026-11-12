@@ -25,6 +25,7 @@ class AppContainer(context: Context) {
     val preferences = AppPreferences(appContext)
     val agentRepository = AgentRepository(BuildConfig.AGENT_BASE_URL)
     val vehicleStateSource: VehicleStateSource = PleosVehicleStateSource(appContext)
+    val daylight = DaylightSource(applicationScope, preferences, vehicleStateSource)
     val navi = PleosNavi(appContext)
     val voice = DoranVoice(appContext)
     val musicPlayer = MusicPlayer(appContext)

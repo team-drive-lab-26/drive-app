@@ -13,7 +13,7 @@ data class Preferences(
     val wakeWord: Boolean = true,
     /** 켜 두면 도란이 먼저 제안하지 않는다 */
     val quiet: Boolean = false,
-    /** 화면 밝기. auto(07~19시 낮), day, night */
+    /** 화면 밝기. auto(전조등, 값이 없으면 07~19시 낮), day, night */
     val screen: String = SCREEN_AUTO,
 ) {
     companion object {

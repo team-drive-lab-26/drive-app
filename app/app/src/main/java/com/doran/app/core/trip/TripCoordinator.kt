@@ -19,6 +19,7 @@ import com.doran.app.core.network.VehicleDto
 import com.doran.app.core.voice.DoranVoice
 import com.doran.app.core.voice.ListenResult
 import com.doran.app.core.voice.VoiceEngine
+import com.doran.app.core.voice.VoiceTestLog
 import com.doran.app.core.voice.WakeMatch
 import com.doran.app.core.voice.WakeWord
 import kotlinx.coroutines.CoroutineScope
@@ -151,7 +152,16 @@ class TripCoordinator(
         voice.listen { result ->
             _state.update { it.copy(isAwake = false) }
             when (result) {
-                is ListenResult.Heard -> submitUtterance(result.text)
+                // 듣는 중에 다시 "도란아"라고 불렀으면 호출어는 떼고 요청만 보낸다
+                is ListenResult.Heard -> {
+                    val match = WakeWord.match(result.text)
+                    VoiceTestLog.heard("awake", result.text, match)
+                    when (match) {
+                        WakeMatch.CallOnly -> say("응?", onDone = ::listen)
+                        is WakeMatch.Command -> submitUtterance(match.text)
+                        WakeMatch.None -> submitUtterance(result.text)
+                    }
+                }
                 ListenResult.NothingHeard -> {
                     setCaption("다시 말해 줘")
                     scheduleStandby()
@@ -378,7 +388,9 @@ class TripCoordinator(
     }
 
     private fun onStandbyHeard(text: String) {
-        when (val match = WakeWord.match(text)) {
+        val match = WakeWord.match(text)
+        VoiceTestLog.heard("standby", text, match)
+        when (match) {
             WakeMatch.None -> scheduleStandby()
             WakeMatch.CallOnly -> {
                 log("호출")
@@ -459,6 +471,7 @@ class TripCoordinator(
                     selectedTrackId = selectedTrackId,
                 )
                 log("응답(${reply.status}): ${reply.caption.ifBlank { reply.speech }.take(40)}")
+                if (isUtterance) VoiceTestLog.reply(reply.status, reply.caption.ifBlank { reply.speech })
                 when {
                     // 사용자가 말하는 중에는 이벤트 제안이 끼어들지 않는다
                     !isUtterance && _state.value.isAwake -> log("듣는 중이라 제안 건너뜀")
@@ -469,7 +482,10 @@ class TripCoordinator(
                 throw e
             } catch (_: Exception) {
                 log("서버 연결 실패")
-                if (isUtterance) say("AI 서버에 연결할 수 없어")
+                if (isUtterance) {
+                    VoiceTestLog.reply("error", "")
+                    say("AI 서버에 연결할 수 없어")
+                }
             } finally {
                 if (isUtterance) _state.update { it.copy(isThinking = false) }
                 // 말할 게 없었거나 말하기에 실패했으면 바로 대기로 돌아간다. 말하는 중이면 끝난 뒤 돌아간다
@@ -552,6 +568,10 @@ class TripCoordinator(
             doorsClosed = !state.isAnyDoorOpen,
             lastStopMinutes = context.lastStopMinutes,
             continuousDrivingMinutes = context.continuousDrivingMinutes,
+            batteryPercent = state.batteryPercent,
+            passengerCount = state.buckledSeats,
+            wiperOn = state.isWiperOn,
+            headlightOn = state.isHeadlightOn,
         )
     }
 
