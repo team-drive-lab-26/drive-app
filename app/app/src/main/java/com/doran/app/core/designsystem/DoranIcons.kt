@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /** 앱에서 쓰는 아이콘. 글리프 대신 같은 굵기의 선으로 직접 그린다 */
-enum class DoranIcon { SIGNPOST, NOTE, SLIDERS, PERSON, PLAY, PAUSE, NEXT, MIC, PIN, VOICE }
+enum class DoranIcon { SIGNPOST, NOTE, SLIDERS, PERSON, PLAY, PAUSE, NEXT, MIC, PIN, VOICE, FOOD, CAFE, REST, SIGHT, EVENT, CULTURE, LEISURE, SHOPPING }
 
 @Composable
 fun Glyph(icon: DoranIcon, color: Color, modifier: Modifier = Modifier, size: Dp = 28.dp) {
@@ -106,6 +106,112 @@ private fun DrawScope.drawIcon(icon: DoranIcon, color: Color) {
             }
             drawPath(pin, color, style = line)
             drawCircle(color, s * 0.1f, p(0.5f, 0.38f))
+        }
+        // 식당: 포크와 칼
+        DoranIcon.FOOD -> {
+            listOf(0.2f, 0.32f, 0.44f).forEach { x -> drawLine(color, p(x, 0.1f), p(x, 0.34f), strokeWidth = line.width, cap = StrokeCap.Round) }
+            val cup = Path().apply {
+                moveTo(0.2f * s, 0.34f * s)
+                cubicTo(0.2f * s, 0.48f * s, 0.44f * s, 0.48f * s, 0.44f * s, 0.34f * s)
+            }
+            drawPath(cup, color, style = line)
+            drawLine(color, p(0.32f, 0.44f), p(0.32f, 0.9f), strokeWidth = line.width, cap = StrokeCap.Round)
+            val knife = Path().apply {
+                moveTo(0.72f * s, 0.9f * s)
+                lineTo(0.72f * s, 0.1f * s)
+                cubicTo(0.86f * s, 0.18f * s, 0.88f * s, 0.42f * s, 0.72f * s, 0.54f * s)
+            }
+            drawPath(knife, color, style = line)
+        }
+        // 카페: 손잡이 달린 잔과 김
+        DoranIcon.CAFE -> {
+            val cup = Path().apply {
+                moveTo(0.12f * s, 0.4f * s)
+                lineTo(0.68f * s, 0.4f * s)
+                lineTo(0.64f * s, 0.78f * s)
+                cubicTo(0.62f * s, 0.88f * s, 0.18f * s, 0.88f * s, 0.16f * s, 0.78f * s)
+                close()
+            }
+            drawPath(cup, color, style = line)
+            val handle = Path().apply {
+                moveTo(0.68f * s, 0.48f * s)
+                cubicTo(0.92f * s, 0.46f * s, 0.92f * s, 0.7f * s, 0.65f * s, 0.7f * s)
+            }
+            drawPath(handle, color, style = line)
+            listOf(0.3f, 0.48f).forEach { x ->
+                val steam = Path().apply {
+                    moveTo(x * s, 0.3f * s)
+                    cubicTo((x - 0.06f) * s, 0.22f * s, (x + 0.06f) * s, 0.18f * s, x * s, 0.08f * s)
+                }
+                drawPath(steam, color, style = line)
+            }
+        }
+        // 휴게소: 주차 표지
+        DoranIcon.REST -> {
+            drawRoundRect(color, topLeft = p(0.1f, 0.1f), size = Size(s * 0.8f, s * 0.8f), cornerRadius = CornerRadius(s * 0.16f), style = line)
+            val letter = Path().apply {
+                moveTo(0.38f * s, 0.74f * s)
+                lineTo(0.38f * s, 0.26f * s)
+                lineTo(0.54f * s, 0.26f * s)
+                cubicTo(0.72f * s, 0.26f * s, 0.72f * s, 0.52f * s, 0.54f * s, 0.52f * s)
+                lineTo(0.38f * s, 0.52f * s)
+            }
+            drawPath(letter, color, style = line)
+        }
+        // 관광지: 산과 해
+        DoranIcon.SIGHT -> {
+            val ridge = Path().apply {
+                moveTo(0.06f * s, 0.84f * s)
+                lineTo(0.38f * s, 0.34f * s)
+                lineTo(0.56f * s, 0.6f * s)
+                lineTo(0.68f * s, 0.46f * s)
+                lineTo(0.94f * s, 0.84f * s)
+                close()
+            }
+            drawPath(ridge, color, style = line)
+            drawCircle(color, s * 0.08f, p(0.76f, 0.2f), style = line)
+        }
+        // 행사: 달력
+        DoranIcon.EVENT -> {
+            drawRoundRect(color, topLeft = p(0.12f, 0.2f), size = Size(s * 0.76f, s * 0.68f), cornerRadius = CornerRadius(s * 0.1f), style = line)
+            drawLine(color, p(0.12f, 0.42f), p(0.88f, 0.42f), strokeWidth = line.width)
+            drawLine(color, p(0.34f, 0.1f), p(0.34f, 0.28f), strokeWidth = line.width, cap = StrokeCap.Round)
+            drawLine(color, p(0.66f, 0.1f), p(0.66f, 0.28f), strokeWidth = line.width, cap = StrokeCap.Round)
+            drawCircle(color, s * 0.06f, p(0.62f, 0.66f))
+        }
+        // 문화시설: 기둥 있는 건물
+        DoranIcon.CULTURE -> {
+            val roof = Path().apply {
+                moveTo(0.1f * s, 0.34f * s)
+                lineTo(0.5f * s, 0.1f * s)
+                lineTo(0.9f * s, 0.34f * s)
+                close()
+            }
+            drawPath(roof, color, style = line)
+            listOf(0.24f, 0.42f, 0.58f, 0.76f).forEach { x -> drawLine(color, p(x, 0.42f), p(x, 0.76f), strokeWidth = line.width, cap = StrokeCap.Round) }
+            drawLine(color, p(0.1f, 0.88f), p(0.9f, 0.88f), strokeWidth = line.width, cap = StrokeCap.Round)
+        }
+        // 레저: 깃발
+        DoranIcon.LEISURE -> {
+            drawLine(color, p(0.24f, 0.08f), p(0.24f, 0.92f), strokeWidth = line.width, cap = StrokeCap.Round)
+            val flag = Path().apply {
+                moveTo(0.24f * s, 0.12f * s)
+                cubicTo(0.48f * s, 0.02f * s, 0.6f * s, 0.24f * s, 0.84f * s, 0.14f * s)
+                lineTo(0.84f * s, 0.5f * s)
+                cubicTo(0.6f * s, 0.6f * s, 0.48f * s, 0.38f * s, 0.24f * s, 0.48f * s)
+            }
+            drawPath(flag, color, style = line)
+        }
+        // 쇼핑: 손잡이 달린 가방
+        DoranIcon.SHOPPING -> {
+            drawRoundRect(color, topLeft = p(0.14f, 0.32f), size = Size(s * 0.72f, s * 0.58f), cornerRadius = CornerRadius(s * 0.08f), style = line)
+            val handle = Path().apply {
+                moveTo(0.34f * s, 0.42f * s)
+                lineTo(0.34f * s, 0.26f * s)
+                cubicTo(0.34f * s, 0.06f * s, 0.66f * s, 0.06f * s, 0.66f * s, 0.26f * s)
+                lineTo(0.66f * s, 0.42f * s)
+            }
+            drawPath(handle, color, style = line)
         }
         // 목소리: 길이가 다른 막대 다섯
         DoranIcon.VOICE -> {

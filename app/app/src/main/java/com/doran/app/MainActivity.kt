@@ -61,6 +61,7 @@ class MainActivity : ComponentActivity() {
             onRouteHandled = viewModel::onRouteHandled,
             onChooseCard = viewModel::chooseCard,
             onDismissCards = viewModel::dismissCards,
+            onAnswerRecord = viewModel::answerRecord,
             onRequestMusic = viewModel::requestMusic,
             onPlayLocal = viewModel::playTrack,
             onPauseMusic = viewModel::pauseMusic,

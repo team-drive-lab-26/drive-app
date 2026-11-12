@@ -56,6 +56,8 @@ data class TripConversationState(
     val recordRequestAt: Long = 0L,
     /** 마지막으로 도착한 곳. 녹음에 붙인다 */
     val lastPlaceName: String = "",
+    /** 들른 곳에서 "한마디 남길래?"라고 묻고 답을 기다리는 중. 정차 화면이 남길래·괜찮아 패널을 띄운다 */
+    val askingRecord: Boolean = false,
     /** 디버그 패널에서 보는 최근 기록 */
     val logs: List<TripLog> = emptyList(),
     /** 이번 여행 테이프. 출발, 들른 곳, 남긴 목소리 순서 */
@@ -87,8 +89,10 @@ class TripCoordinator(
     /** 앱을 켤 때마다 새 여행. 앨범에서 "이번 여행"을 찾을 때 쓴다 */
     val sessionId = UUID.randomUUID().toString()
 
-    // "한마디 남길래?"에 대한 답을 기다리는 중
-    private var awaitingRecordAnswer = false
+    // "한마디 남길래?"에 대한 답을 기다리는 중. 화면도 알도록 상태에 둔다
+    private var awaitingRecordAnswer: Boolean
+        get() = _state.value.askingRecord
+        set(value) = _state.update { it.copy(askingRecord = value) }
     private val detector = TripEventDetector()
 
     // 내비는 장소 ID를 모르므로, 우리가 추가한 경유지 이름으로 서버 장소 ID를 찾는다
@@ -258,6 +262,9 @@ class TripCoordinator(
         }
         ask(utterance = text)
     }
+
+    /** "한마디 남길래?" 패널의 버튼. 말로 답한 것과 같게 처리한다 */
+    fun answerRecord(yes: Boolean) = submitUtterance(if (yes) "응" else "괜찮아")
 
     /** 정차 화면이나 "한마디 남길래?"에서 녹음 화면을 연다 */
     fun requestRecord() {
