@@ -29,6 +29,23 @@ class WakeWordTest {
     }
 
     @Test
+    fun acceptsSimilarSoundByJamo() {
+        assertEquals(WakeMatch.CallOnly, WakeWord.match("도라마"))
+        assertEquals(WakeMatch.CallOnly, WakeWord.match("돌아다"))
+        assertEquals(WakeMatch.CallOnly, WakeWord.match("돌 아나"))
+        assertEquals(WakeMatch.Command("노래 틀어 줘"), WakeWord.match("어 또래나 노래 틀어 줘"))
+    }
+
+    @Test
+    fun rejectsOtherWordsBySound() {
+        assertEquals(WakeMatch.None, WakeWord.match("드라마 틀어 줘"))
+        assertEquals(WakeMatch.None, WakeWord.match("토란 먹자"))
+        assertEquals(WakeMatch.None, WakeWord.match("도라지 무침"))
+        assertEquals(WakeMatch.None, WakeWord.match("그러나 저기"))
+        assertEquals(WakeMatch.None, WakeWord.match("돌아가자"))
+    }
+
+    @Test
     fun keepsWordStartingLikeSuffix() {
         assertEquals(WakeMatch.Command("이거 틀어 줘"), WakeWord.match("도란 이거 틀어 줘"))
     }
