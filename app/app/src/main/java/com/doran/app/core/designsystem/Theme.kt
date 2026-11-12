@@ -29,12 +29,33 @@ object DoranPalette {
 
     private fun pick(night: Long, day: Long) = Color(if (isDay) day else night)
 
+    /** 와이퍼가 돌고 있는지. 켜져 있으면 하늘이 흐려지고 길이 젖어 비친다 */
+    var isWet by mutableStateOf(false)
+
     val Background get() = pick(0xFF0B1018, 0xFFE8EDF2)
     val Ridge get() = pick(0xFF121A26, 0xFFD2DAE2)
     val Ground get() = pick(0xFF0F1520, 0xFFDDE3E9)
     val Road get() = pick(0xFF161E2A, 0xFF4A5361)
     val RoadEdge get() = pick(0xFF2E3A4C, 0xFFF4F6F8)
     val LaneMark get() = pick(0xFF3A475B, 0xFFE3E8ED)
+
+    // 앞길 장면. 하늘은 위에서 지평선으로 갈수록 옅어지고, 산은 멀수록 하늘색에 묻힌다
+    val SkyTop get() = pick(0xFF03060B, 0xFF9FB3C6)
+    val SkyMid get() = pick(0xFF0A111C, 0xFFC9D4DD)
+    val SkyHorizon get() = pick(0xFF1C2636, 0xFFEEECE5)
+    val RidgeFar get() = pick(0xFF151E2B, 0xFFCBD3DA)
+    val RidgeMid get() = pick(0xFF0F1621, 0xFFB5C0C8)
+    val RidgeNear get() = pick(0xFF0D1520, 0xFF9AA7AF)
+    val GroundFar get() = pick(0xFF121A26, 0xFFB7C0B3)
+    val GroundNear get() = pick(0xFF05080D, 0xFF8E9889)
+    val RoadFar get() = pick(0xFF1B2331, 0xFF8C949D)
+    val RoadNear get() = pick(0xFF0E141C, 0xFF3A424C)
+    val Shoulder get() = pick(0xFF151C27, 0xFF6E7670)
+    val EdgeLine get() = pick(0xFF8C97A8, 0xFFF7F8F9)
+    val Lane get() = pick(0xFFB9C3D1, 0xFFF2F4F6)
+    val Rail get() = pick(0xFF2B3544, 0xFFB4BCC4)
+    val RailShade get() = pick(0xFF161D28, 0xFF7C858E)
+    val Reflector get() = pick(0xFFE9EEF4, 0xFFF4F5F6)
     val Surface get() = pick(0xFF151C27, 0xFFFFFFFF)
     val SurfaceHigh get() = pick(0xFF1B2431, 0xFFFFFFFF)
     val Line get() = pick(0xFF273244, 0xFFD3DAE2)
@@ -84,6 +105,21 @@ object DoranText {
     /** 시각, 거리, 초. 자리가 흔들리지 않게 고정폭 숫자 */
     val number = TextStyle(localeList = Korean, fontFamily = Suit, fontSize = 18.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold, fontFeatureSettings = TABULAR)
     val countdown = TextStyle(localeList = Korean, fontFamily = Suit, fontSize = 112.sp, lineHeight = 112.sp, fontWeight = FontWeight.ExtraBold, fontFeatureSettings = TABULAR, letterSpacing = (-2).sp)
+
+    /** 정차 화면 남은 시간. 2m 떨어진 뒷자리에서도 한눈에 읽히는 크기 */
+    val eta = TextStyle(localeList = Korean, fontFamily = Suit, fontSize = 60.sp, lineHeight = 66.sp, fontWeight = FontWeight.ExtraBold, fontFeatureSettings = TABULAR, letterSpacing = (-1).sp)
+
+    /** 남은 시간 옆 도착 시각, 목적지 */
+    val etaSide = TextStyle(localeList = Korean, fontFamily = Suit, fontSize = 26.sp, lineHeight = 32.sp, fontWeight = FontWeight.SemiBold, fontFeatureSettings = TABULAR)
+
+    /** 정차 화면에서 도란이 하는 말 */
+    val say = TextStyle(localeList = Korean, fontFamily = Suit, fontSize = 44.sp, lineHeight = 56.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.6).sp, lineBreak = Phrase)
+
+    /** 큰 화면 제목(음악 곡 이름, 앨범 날짜) */
+    val display = TextStyle(localeList = Korean, fontFamily = Suit, fontSize = 52.sp, lineHeight = 62.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.8).sp, lineBreak = Phrase)
+
+    /** 위 막대 탭 이름 */
+    val tab = TextStyle(localeList = Korean, fontFamily = Suit, fontSize = 24.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold)
 
     /** 길가 표지판 이름. 거리에 따라 크기를 줄여 쓴다 */
     val sign = TextStyle(localeList = Korean, fontFamily = Suit, fontSize = 27.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold)

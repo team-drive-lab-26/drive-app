@@ -33,6 +33,9 @@ class DoranActions(
     val onChooseCard: (AgentCard) -> Unit,
     val onDismissCards: () -> Unit,
     val onRequestMusic: () -> Unit,
+    val onPlayLocal: (String) -> Unit,
+    val onPauseMusic: () -> Unit,
+    val onResumeMusic: () -> Unit,
     val currentSessionId: String,
 )
 
@@ -94,7 +97,8 @@ fun DoranNavHost(ui: MainUiState, actions: DoranActions, onboarded: Boolean) {
             CharacterScreen(
                 face = ui.face,
                 caption = ui.caption,
-                routeLine = ui.routeLine,
+                eta = ui.etaText,
+                vehicle = ui.vehicle,
                 ahead = RoadAhead(destination = ui.destination, arrival = ui.arrivalClock, stops = ui.conversation.ahead, detour = ui.conversation.detour),
                 cards = ui.conversation.cards,
                 links = HomeLinks(
@@ -117,9 +121,14 @@ fun DoranNavHost(ui: MainUiState, actions: DoranActions, onboarded: Boolean) {
                 face = ui.face,
                 caption = ui.caption,
                 tracks = ui.conversation.cards.filter { it.isTrack },
+                library = ui.local.library,
                 nowPlaying = ui.local.nowPlaying,
+                paused = ui.local.musicPaused,
                 onEnter = actions.onRequestMusic,
                 onPlay = actions.onChooseCard,
+                onPlayLocal = actions.onPlayLocal,
+                onPause = actions.onPauseMusic,
+                onResume = actions.onResumeMusic,
                 onCall = actions.onCall,
                 onBack = { nav.popBackStack() },
             )

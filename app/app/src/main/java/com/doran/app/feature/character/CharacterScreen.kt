@@ -13,16 +13,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.doran.app.core.data.AgentCard
-import com.doran.app.core.designsystem.CALL_HINT
+import com.doran.app.core.designsystem.DoranIcon
+import com.doran.app.core.designsystem.NavLink
+import com.doran.app.core.designsystem.SayLine
+import com.doran.app.core.model.VehicleState
 import com.doran.app.core.designsystem.DoranFace
 import com.doran.app.core.designsystem.DoranPalette
 import com.doran.app.core.designsystem.RoadScene
@@ -49,7 +49,8 @@ class RoadAhead(val destination: String, val arrival: String, val stops: List<Ah
 fun CharacterScreen(
     face: DoranFace,
     caption: String,
-    routeLine: String,
+    eta: String,
+    vehicle: VehicleState,
     ahead: RoadAhead,
     cards: List<AgentCard>,
     links: HomeLinks,
@@ -87,35 +88,40 @@ fun CharacterScreen(
             .fillMaxSize()
             .background(DoranPalette.Background),
     ) {
-        RoadScene(signs = signs, horizon = 0.40f, orbSize = orb, via = via) {
+        RoadScene(signs = signs, horizon = 0.40f, orbSize = orb, via = via, flow = shown.isEmpty()) {
             TappableDoran(face = face, onCall = onCall, onLongPress = onLongPress, modifier = Modifier.fillMaxSize())
         }
         TopBar(
-            title = routeLine.ifBlank { "목적지를 말해 주면 길을 펼쳐 둘게" },
-            sub = if (ahead.arrival.isBlank()) "" else "${ahead.arrival} 도착",
-            links = listOf("앨범" to links.onAlbum, "음악" to links.onMusic, "설정" to links.onSettings),
+            destination = ahead.destination,
+            eta = eta,
+            arrival = ahead.arrival,
+            vehicle = vehicle,
+            links = listOf(
+                NavLink("앨범", DoranIcon.SIGNPOST, links.onAlbum),
+                NavLink("음악", DoranIcon.NOTE, links.onMusic),
+                NavLink("설정", DoranIcon.SLIDERS, links.onSettings),
+            ),
         )
-        Text(
-            caption.ifBlank { CALL_HINT },
-            style = MaterialTheme.typography.headlineLarge,
-            color = if (caption.isBlank()) DoranPalette.InkSoft else DoranPalette.Ink,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis,
+        SayLine(
+            caption,
+            maxLines = if (shown.isEmpty()) 2 else 3,
             modifier = Modifier
-                .padding(start = 48.dp, top = 116.dp)
-                .width(if (shown.isEmpty()) 720.dp else 620.dp),
+                .padding(start = 48.dp, top = if (vehicle.hasStatus) 214.dp else 180.dp)
+                .width(if (shown.isEmpty()) 820.dp else 660.dp),
         )
         AnimatedVisibility(
             visible = shown.isNotEmpty(),
             enter = fadeIn(tween(240, delayMillis = 160)) + slideInHorizontally(tween(420, delayMillis = 160)) { it / 4 },
             exit = fadeOut(tween(150)),
-            modifier = Modifier.align(Alignment.TopEnd).padding(top = 112.dp, end = 40.dp),
+            modifier = Modifier.align(Alignment.TopEnd).padding(top = 128.dp, end = 32.dp),
         ) {
-            Column(Modifier.width(380.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(Modifier.width(400.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 shown.forEachIndexed { i, card ->
-                    SuggestionCard(card = card, onAccept = { onChoose(card) }, onDismiss = onDismissCards, compact = i > 0)
+                    SuggestionCard(card = card, onAccept = { onChoose(card) }, onDismiss = onDismissCards, compact = i > 0, batteryPercent = vehicle.batteryPercent)
                 }
             }
         }
     }
 }
+
+private val VehicleState.hasStatus: Boolean get() = batteryPercent != null || (buckledSeats ?: 0) > 0

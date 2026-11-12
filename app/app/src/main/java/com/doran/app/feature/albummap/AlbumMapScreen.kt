@@ -77,7 +77,8 @@ fun AlbumMapScreen(onBack: () -> Unit, viewModel: AlbumMapViewModel = viewModel(
     val measurer = rememberTextMeasurer()
     val projection = remember(ui.route, ui.pins) { MapProjection.of(ui.route, ui.pins) }
 
-    Column(Modifier.fillMaxSize().background(DoranPalette.Background)) {
+    // 앞길과 같은 하늘 아래 지도를 눕힌다
+    Column(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(DoranPalette.SkyTop, DoranPalette.SkyMid, DoranPalette.SkyHorizon)))) {
         BackBar(back = "지나온 길", title = ui.title, onBack = onBack)
         Row(Modifier.weight(1f).fillMaxWidth()) {
             Box(Modifier.weight(1f).fillMaxHeight()) {
@@ -110,13 +111,26 @@ fun AlbumMapScreen(onBack: () -> Unit, viewModel: AlbumMapViewModel = viewModel(
                         val radius = (if (selected) 24f else 17f) * scale
                         if (selected) drawCircle(DoranPalette.Accent, radius + 8f * scale, head)
                         drawCircle(color, radius, head)
-                        val label = measurer.measure(pin.name, TextStyle(fontFamily = Suit, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = DoranPalette.Ink))
-                        drawText(label, topLeft = Offset(head.x - label.size.width / 2f, head.y - radius - label.size.height - 6f))
+                        val label = measurer.measure(pin.name, TextStyle(fontFamily = Suit, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = if (selected) DoranPalette.OnAccent else DoranPalette.Ink))
+                        // 이름표. 경로선 위에 겹쳐도 읽히게 바탕을 깐다
+                        val padX = 10.dp.toPx()
+                        val padY = 4.dp.toPx()
+                        val tl = Offset(head.x - label.size.width / 2f - padX, head.y - radius - label.size.height - padY * 2 - 8.dp.toPx())
+                        drawRoundRect(
+                            if (selected) DoranPalette.Accent else DoranPalette.Surface.copy(alpha = 0.94f),
+                            topLeft = tl,
+                            size = Size(label.size.width + padX * 2, label.size.height + padY * 2),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(8.dp.toPx()),
+                        )
+                        drawText(label, topLeft = Offset(tl.x + padX, tl.y + padY))
                     }
                     projection.endLabels(ui.route).forEach { (text, point) ->
                         val p = projection.ground(point.first, point.second, size.width, size.height, k)
-                        val label = measurer.measure(text, TextStyle(fontFamily = Suit, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = DoranPalette.InkMute))
-                        drawText(label, topLeft = Offset(p.x - label.size.width / 2f, p.y + 34f))
+                        val label = measurer.measure(text, TextStyle(fontFamily = Suit, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = DoranPalette.InkSoft))
+                        val padX = 8.dp.toPx()
+                        val tl = Offset(p.x - label.size.width / 2f - padX, p.y + 14.dp.toPx())
+                        drawRoundRect(DoranPalette.Background.copy(alpha = 0.9f), topLeft = tl, size = Size(label.size.width + padX * 2, label.size.height + 4.dp.toPx()), cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx()))
+                        drawText(label, topLeft = Offset(tl.x + padX, tl.y + 2.dp.toPx()))
                     }
                 }
                 if (ui.message.isNotBlank()) {
@@ -279,8 +293,8 @@ private fun DrawScope.drawGround(projection: MapProjection, tilt: Float) {
         corners.drop(1).forEach { lineTo(it.x, it.y) }
         close()
     }
-    drawPath(path, DoranPalette.Road)
-    drawPath(path, DoranPalette.RoadEdge, style = Stroke(width = 3f))
+    drawPath(path, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(DoranPalette.RoadFar, DoranPalette.RoadNear), startY = corners[2].y, endY = corners[0].y))
+    drawPath(path, DoranPalette.LineStrong, style = Stroke(width = 2f))
     // 지도 바닥의 옅은 격자. 기울어진 정도가 보이게
     for (i in 1 until 6) {
         val z = -0.1f + 1.2f * i / 6f

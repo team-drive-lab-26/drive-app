@@ -35,6 +35,9 @@ interface VehicleStateSource {
 
     /** 디버그 막대에서 문 열림을 바꾼다 */
     fun overrideDoorOpen(open: Boolean)
+
+    /** 디버그용. 차량 서비스가 없는 에뮬레이터에서 배터리·탑승 인원·와이퍼 값을 넣는다 */
+    fun overrideExtras(transform: (VehicleState) -> VehicleState)
 }
 
 class FakeVehicleStateSource : VehicleStateSource {
@@ -43,6 +46,7 @@ class FakeVehicleStateSource : VehicleStateSource {
 
     override fun overrideGear(gear: Gear) = _state.update { it.copy(gear = gear) }
     override fun overrideDoorOpen(open: Boolean) = _state.update { it.copy(isAnyDoorOpen = open) }
+    override fun overrideExtras(transform: (VehicleState) -> VehicleState) = _state.update(transform)
 }
 
 /** Pleos Vehicle SDK에서 기어, 문 열림, 배터리, 안전벨트, 와이퍼, 전조등을 받는다. 연결에 실패하면 디버그 값만 남는다 */
@@ -191,6 +195,7 @@ class PleosVehicleStateSource(context: Context) : VehicleStateSource {
 
     override fun overrideGear(gear: Gear) = _state.update { it.copy(gear = gear) }
     override fun overrideDoorOpen(open: Boolean) = _state.update { it.copy(isAnyDoorOpen = open) }
+    override fun overrideExtras(transform: (VehicleState) -> VehicleState) = _state.update(transform)
 
     override fun release() {
         if (!started) return

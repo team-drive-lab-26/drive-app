@@ -1,7 +1,8 @@
 package com.doran.app.core.designsystem
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,6 +41,9 @@ fun AgentCard.headline(): String {
     return if (distance < 0.5) "$kindName · 경로 위" else "$kindName · 경로에서 ${"%.1f".format(distance)}km"
 }
 
+/** 안내 문구에 전기차 충전소가 적혀 있는 곳 */
+val AgentCard.canCharge: Boolean get() = "전기차" in summary
+
 private val PanelShape = RoundedCornerShape(22.dp)
 
 /**
@@ -53,20 +57,19 @@ fun SuggestionCard(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     compact: Boolean = false,
+    batteryPercent: Int? = null,
 ) {
     Column(
         modifier
             .fillMaxWidth()
-            .clip(PanelShape)
-            .background(DoranPalette.Surface)
-            .border(1.dp, DoranPalette.Line, PanelShape),
+            .panel(PanelShape),
     ) {
         if (!compact && card.imageUrl.isNotBlank()) {
             AsyncImage(
                 model = card.imageUrl,
                 contentDescription = card.name,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxWidth().height(170.dp).background(DoranPalette.SurfaceHigh),
+                modifier = Modifier.fillMaxWidth().height(190.dp).background(DoranPalette.SurfaceHigh),
             )
         }
         Column(Modifier.padding(horizontal = 24.dp, vertical = 20.dp)) {
@@ -79,6 +82,15 @@ fun SuggestionCard(
                 maxLines = if (compact) 1 else 2,
                 overflow = TextOverflow.Ellipsis,
             )
+            // 배터리가 낮을 때 휴게소 안내에 전기차 충전소가 있으면 그 사실을 앞에 꺼낸다
+            if (batteryPercent != null && batteryPercent <= LOW_BATTERY && card.canCharge) {
+                Spacer(Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    BatteryIcon(batteryPercent, DoranPalette.Accent)
+                    Spacer(Modifier.width(10.dp))
+                    Text("배터리 $batteryPercent%. 여기서 충전할 수 있어", style = MaterialTheme.typography.titleMedium, color = DoranPalette.Accent)
+                }
+            }
             Spacer(Modifier.height(18.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 DoranPrimaryButton(text = if (card.isTrack) "틀기" else "들르기", onClick = onAccept, modifier = Modifier.weight(1.3f))
