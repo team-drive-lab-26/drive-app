@@ -61,6 +61,7 @@ class AgentRepository(baseUrl: String) {
         navigation: NavigationDto = NavigationDto(),
         selectedPlaceId: String? = null,
         selectedTrackId: String? = null,
+        now: String? = null,
     ): AgentReply {
         val request = AgentRequest(
             sessionId = sessionId,
@@ -69,6 +70,7 @@ class AgentRepository(baseUrl: String) {
             navigation = navigation,
             utterance = utterance,
             event = event,
+            now = now,
             selectedPlaceId = selectedPlaceId,
             selectedTrackId = selectedTrackId,
         )

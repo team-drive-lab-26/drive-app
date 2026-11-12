@@ -34,6 +34,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.time.LocalTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
@@ -305,7 +307,28 @@ class TripCoordinator(
             }
         }
         log("이벤트(시연): $event")
-        ask(event = event, vehicleOverride = v, navigationOverride = n)
+        ask(event = event, vehicleOverride = v, navigationOverride = n, now = demoNow())
+    }
+
+    /**
+     * 서버는 밤 9시~아침 7시에는 먼저 제안하지 않는다. 시연 이벤트를 그 시간에 보내면 답이 비므로
+     * 오늘 오후 2시로 보낸다. 같은 종류 제안은 하루 한 번이라, 다시 보려면 앱을 새로 켠다(세션이 바뀐다).
+     */
+    private fun demoNow(): String? {
+        val now = ZonedDateTime.now(KST)
+        if (now.hour in 7 until 21) return null
+        return now.withHour(14).withMinute(0).withSecond(0).withNano(0).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+    }
+
+    /**
+     * 디버그용. 에뮬레이터 내비는 실제로 도착하지 않으므로, 이름을 받아 도착해서 P로 세운 것처럼 처리한다.
+     * 이름이 비면 지금 넣어 둔 경유지로 친다.
+     */
+    fun debugArrive(name: String) {
+        val place = name.ifBlank { _state.value.detour }.ifBlank { return }
+        vehicle.overrideGear(Gear.P)
+        log("도착(시연): $place")
+        recordStop(TripTrigger.Stopped(place, isWaypoint = true))
     }
 
     /**
@@ -452,6 +475,7 @@ class TripCoordinator(
         navigationOverride: NavigationDto? = null,
         selectedPlaceId: String? = null,
         selectedTrackId: String? = null,
+        now: String? = null,
     ) {
         val isUtterance = utterance != null
         if (!agent.isConfigured) {
@@ -469,6 +493,7 @@ class TripCoordinator(
                     navigation = navigationOverride ?: navigationDto(),
                     selectedPlaceId = selectedPlaceId,
                     selectedTrackId = selectedTrackId,
+                    now = now,
                 )
                 log("응답(${reply.status}): ${reply.caption.ifBlank { reply.speech }.take(40)}")
                 if (isUtterance) VoiceTestLog.reply(reply.status, reply.caption.ifBlank { reply.speech })
@@ -511,6 +536,13 @@ class TripCoordinator(
                     NaviCommandResult.Submitted -> {
                         _state.update { it.copy(detour = waypoint.name) }
                         cheer()
+                        // 경유지를 넣으면 내비가 경로를 다시 짜지만 남은 시간 이벤트가 바로 오지 않는다. 몇 초 뒤 다시 묻는다
+                        scope.launch {
+                            WAYPOINT_REFRESH_MS.forEach { wait ->
+                                delay(wait)
+                                navi.refresh()
+                            }
+                        }
                     }
                     NaviCommandResult.NotConnected -> say("내비 연결을 확인해 줘.")
                     NaviCommandResult.Failed -> say("경유지를 추가하지 못했어.")
@@ -606,6 +638,8 @@ class TripCoordinator(
         val RECORD_YES = listOf("응", "네", "그래", "좋아", "남길", "할래", "녹음")
         val RECORD_NO = listOf("아니", "괜찮아", "됐어", "나중에", "싫어", "안 남", "안 할")
         const val MAX_LOGS = 30
+        private val WAYPOINT_REFRESH_MS = listOf(3_000L, 7_000L)
+        private val KST: ZoneId = ZoneId.of("Asia/Seoul")
         val HH_MM: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     }
 }

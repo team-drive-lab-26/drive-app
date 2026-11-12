@@ -120,6 +120,7 @@ class MainActivity : ComponentActivity() {
         intent.getStringExtra("debug")?.let { viewModel.setDebugVisible(it == "on") }
         intent.getStringExtra("say")?.let(viewModel::submitUtterance)
         intent.getStringExtra("event")?.let(viewModel::sendDemoEvent)
+        intent.getStringExtra("arrive")?.let { viewModel.debugArrive(if (it == "-") "" else it) }
         if (intent.getStringExtra("demo") == "tape") viewModel.seedDemoTape()
         intent.getStringExtra("screen")?.let { mode -> preferences.update { it.copy(screen = mode) } }
         intent.getStringExtra("detour")?.let(viewModel::showDebugDetour)

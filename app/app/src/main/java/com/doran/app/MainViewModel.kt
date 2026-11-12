@@ -127,6 +127,7 @@ class MainViewModel(
     fun enableHandsFree() = coordinator.enableHandsFree()
     fun submitUtterance(text: String) = coordinator.submitUtterance(text)
     fun sendDemoEvent(event: String) = coordinator.sendDemoEvent(event)
+    fun debugArrive(name: String) = coordinator.debugArrive(name)
     fun startDemoRoute() = coordinator.startDemoRoute()
     fun seedDemoTape() = coordinator.seedDemoTape()
     fun stopTalking() = coordinator.stopTalking()
