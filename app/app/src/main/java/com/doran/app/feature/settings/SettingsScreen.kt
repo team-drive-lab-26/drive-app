@@ -103,10 +103,10 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = viewModel(
     val prefs by viewModel.state.collectAsStateWithLifecycle()
     var newName by remember { mutableStateOf("") }
     Box(Modifier.fillMaxSize().background(DoranPalette.Background)) {
-        RoadScene(horizon = 0.40f, showRoute = false)
+        RoadScene(horizon = 0.40f, showRoute = false, orbLight = false)
         Column(Modifier.width(560.dp)) {
             BackBar(back = "도란", title = "설정", onBack = onBack)
-            SayLine("여기서 바꾼 건 이 기기에만 남아.", maxLines = 3, modifier = Modifier.padding(start = 48.dp, top = 8.dp, end = 24.dp))
+            SayLine("설정은 이 기기에만 남아.", maxLines = 3, modifier = Modifier.padding(start = 48.dp, top = 8.dp, end = 24.dp))
         }
         Column(
             Modifier

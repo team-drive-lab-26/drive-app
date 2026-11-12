@@ -72,7 +72,7 @@ fun AlbumScreen(
                     title = trip.title,
                     sub = if (trip.isCurrent) "지금 여행 · ${trip.detail}" else trip.detail,
                     depth = 0.07f + 0.15f * i,
-                    side = if (i % 2 == 0) RoadSide.LEFT else RoadSide.RIGHT,
+                    side = RoadSide.LEFT,
                     hot = trip.isCurrent,
                     selected = trip.sessionId == ui.selectedId,
                 ),
@@ -80,7 +80,7 @@ fun AlbumScreen(
         }
         if (!ui.loading && trips.size < 3) {
             val i = trips.size
-            add(RoadSign("next", "다음 여행", "출발하면 여기 서", 0.07f + 0.15f * i, if (i % 2 == 0) RoadSide.LEFT else RoadSide.RIGHT, ghost = true))
+            add(RoadSign("next", "다음 여행", "출발하면 여기 서", 0.07f + 0.15f * i, RoadSide.LEFT, ghost = true))
         }
     }
     Box(Modifier.fillMaxSize().background(DoranPalette.Background)) {
@@ -88,6 +88,7 @@ fun AlbumScreen(
             signs = signs,
             horizon = 0.40f,
             showRoute = false,
+            orbLight = false,
             onSignClick = { id -> if (id == ui.selectedId) onOpenTrip(id) else viewModel.select(id) },
         )
         Column(Modifier.width(760.dp)) {

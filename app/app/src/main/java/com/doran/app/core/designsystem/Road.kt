@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
@@ -202,6 +203,7 @@ fun RoadScene(
     showRoute: Boolean = true,
     via: String? = null,
     flow: Boolean = false,
+    orbLight: Boolean = true,
     onSignClick: ((String) -> Unit)? = null,
     orb: @Composable () -> Unit = {},
 ) {
@@ -226,7 +228,7 @@ fun RoadScene(
 
         Canvas(Modifier.fillMaxSize()) {
             drawLanes(g, phase.value)
-            drawOrbLight(g, orbPx, liftPx)
+            if (orbLight) drawOrbLight(g, orbPx, liftPx)
 
             if (showRoute) {
                 val from = Offset(g.vx, orbTop + orbPx * 0.1f)
@@ -347,7 +349,7 @@ private fun androidx.compose.ui.draw.CacheDrawScope.buildLandscape(g: RoadGeomet
     val w = g.width
     // 흐린 날은 하늘이 회색으로 가라앉는다
     val overcast = if (wet) (if (day) Color(0xFFA9B0B6) else Color(0xFF151A21)) else null
-    fun sky(c: Color) = overcast?.let { lerp(c, it, 0.55f) } ?: c
+    fun sky(c: Color) = overcast?.let { lerp(c, it, 0.7f) } ?: c
     val skyBrush = Brush.verticalGradient(
         0f to sky(DoranPalette.SkyTop),
         0.55f to sky(DoranPalette.SkyMid),
@@ -357,9 +359,9 @@ private fun androidx.compose.ui.draw.CacheDrawScope.buildLandscape(g: RoadGeomet
     )
     val haze = sky(DoranPalette.SkyHorizon)
     val ridges = listOf(
-        ridgePath(g, h * 0.12f, 1.3f, 0.15f) to sky(DoranPalette.RidgeFar),
-        ridgePath(g, h * 0.085f, 4.1f, 0.35f) to sky(DoranPalette.RidgeMid),
-        ridgePath(g, h * 0.05f, 2.2f, 0.7f) to DoranPalette.RidgeNear,
+        ridgePath(g, h * 0.10f, 1.3f, 0.15f) to sky(DoranPalette.RidgeFar),
+        ridgePath(g, h * 0.07f, 4.1f, 0.35f) to sky(DoranPalette.RidgeMid),
+        ridgePath(g, h * 0.042f, 2.2f, 0.7f) to DoranPalette.RidgeNear,
     )
     val groundBrush = Brush.verticalGradient(0f to DoranPalette.GroundFar, 1f to DoranPalette.GroundNear, startY = g.horizon, endY = h)
 
@@ -431,8 +433,8 @@ private fun androidx.compose.ui.draw.CacheDrawScope.buildLandscape(g: RoadGeomet
 
     val wetSheen = if (wet) {
         Brush.verticalGradient(
-            0f to haze.copy(alpha = if (day) 0.55f else 0.35f),
-            0.5f to haze.copy(alpha = 0.08f),
+            0f to haze.copy(alpha = if (day) 0.75f else 0.5f),
+            0.6f to haze.copy(alpha = if (day) 0.22f else 0.14f),
             1f to Color.Transparent,
             startY = g.horizon,
             endY = h,
@@ -444,15 +446,7 @@ private fun androidx.compose.ui.draw.CacheDrawScope.buildLandscape(g: RoadGeomet
     return onDrawBehind {
         drawRect(skyBrush, size = Size(w, g.horizon + 2f))
         // 지평선 위로 번지는 빛. 낮에는 엷은 볕, 밤에는 먼 도시의 기운
-        drawOval(
-            Brush.radialGradient(
-                listOf(haze.copy(alpha = if (day) 0.9f else 0.7f), Color.Transparent),
-                center = Offset(g.vx, g.horizon),
-                radius = w * 0.45f,
-            ),
-            topLeft = Offset(g.vx - w * 0.45f, g.horizon - h * 0.22f),
-            size = Size(w * 0.9f, h * 0.44f),
-        )
+        softGlow(haze.copy(alpha = if (day) 0.9f else 0.7f), Offset(g.vx, g.horizon), w * 0.5f, h * 0.22f)
         drawRect(groundBrush, topLeft = Offset(0f, g.horizon), size = Size(w, h - g.horizon))
         ridges.forEach { (path, color) -> drawPath(path, color) }
         drawPath(gravelL, DoranPalette.Shoulder)
@@ -471,27 +465,23 @@ private fun androidx.compose.ui.draw.CacheDrawScope.buildLandscape(g: RoadGeomet
             drawCircle(DoranPalette.Reflector.copy(alpha = if (day) 0.55f * glow else 0.9f * glow), radius = (p.width * 0.9f).coerceAtLeast(1f), center = Offset(p.top.x, p.top.y + railH * 0.22f / p.z))
         }
         // 지평선 쪽 공기. 멀수록 하늘색에 묻힌다
+        val mistTop = g.horizon - h * 0.035f
+        val mistBottom = g.horizon + (h - g.horizon) * 0.26f
+        val mist = if (day) 0.72f else 0.8f
         drawRect(
             Brush.verticalGradient(
-                0f to haze.copy(alpha = 0.92f),
+                0f to haze.copy(alpha = 0f),
+                (g.horizon - mistTop) / (mistBottom - mistTop) to haze.copy(alpha = mist),
                 1f to haze.copy(alpha = 0f),
-                startY = g.horizon,
-                endY = g.horizon + (h - g.horizon) * 0.32f,
+                startY = mistTop,
+                endY = mistBottom,
             ),
-            topLeft = Offset(0f, g.horizon),
-            size = Size(w, (h - g.horizon) * 0.32f),
+            topLeft = Offset(0f, mistTop),
+            size = Size(w, mistBottom - mistTop),
         )
         // 밤에는 전조등이 비추는 앞쪽 길만 조금 밝다
         if (!day) {
-            drawOval(
-                Brush.radialGradient(
-                    listOf(Color(0xFFFFF3DD).copy(alpha = 0.10f), Color.Transparent),
-                    center = Offset(g.vx, h * 1.02f),
-                    radius = g.bottomHalf * 1.1f,
-                ),
-                topLeft = Offset(g.vx - g.bottomHalf * 1.1f, h - (h - g.horizon) * 0.62f),
-                size = Size(g.bottomHalf * 2.2f, (h - g.horizon) * 1.24f),
-            )
+            softGlow(Color(0xFFFFF3DD).copy(alpha = 0.09f), Offset(g.vx, h * 1.02f), g.bottomHalf * 1.15f, (h - g.horizon) * 0.62f)
         }
     }
 }
@@ -501,7 +491,7 @@ private fun DrawScope.drawLanes(g: RoadGeometry, phase: Float) {
     val day = DoranPalette.isDay
     val base = DoranPalette.Lane
     val far = DoranPalette.RoadFar
-    val laneW = g.bottomHalf * 0.02f
+    val laneW = g.bottomHalf * 0.013f
     for (f in listOf(-1f / 3f, 1f / 3f)) {
         var start = 1f - DASH_PERIOD + phase
         while (start < 40f) {
@@ -530,22 +520,22 @@ private fun DrawScope.drawLanes(g: RoadGeometry, phase: Float) {
     }
 }
 
+/** 가장자리가 보이지 않는 타원 빛. 원형 그라디언트를 세로로 눌러 그린다 */
+private fun DrawScope.softGlow(color: Color, center: Offset, rx: Float, ry: Float) {
+    scale(1f, ry / rx, pivot = center) {
+        drawCircle(Brush.radialGradient(listOf(color, color.copy(alpha = color.alpha * 0.45f), Color.Transparent), center = center, radius = rx), radius = rx, center = center)
+    }
+}
+
 /** 도란 빛이 길바닥에 비친다. 젖은 길이면 세로로 길게 끌린다 */
 private fun DrawScope.drawOrbLight(g: RoadGeometry, orbPx: Float, liftPx: Float) {
     val day = DoranPalette.isDay
     val wet = DoranPalette.isWet
     val cy = g.height - liftPx
-    val rx = orbPx * 1.25f
-    val ry = if (wet) orbPx * 1.1f else orbPx * 0.32f
-    drawOval(
-        Brush.radialGradient(
-            listOf(DoranPalette.Accent.copy(alpha = if (day) 0.22f else 0.34f), Color.Transparent),
-            center = Offset(g.vx, cy),
-            radius = rx,
-        ),
-        topLeft = Offset(g.vx - rx, cy - ry * 0.5f),
-        size = Size(rx * 2f, ry * 1.5f),
-    )
+    val glow = DoranPalette.Accent.copy(alpha = if (day) 0.26f else 0.36f)
+    softGlow(glow, Offset(g.vx, cy), orbPx * 1.3f, orbPx * 0.34f)
+    // 젖은 길에는 도란 빛이 아래로 길게 끌린다
+    if (wet) softGlow(glow, Offset(g.vx, cy + orbPx * 0.2f), orbPx * 0.42f, orbPx * 1.1f)
     // 길에 닿은 그림자
     drawOval(
         Color.Black.copy(alpha = if (day) 0.30f else 0.45f),

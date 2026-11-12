@@ -48,6 +48,7 @@ import com.doran.app.core.data.AgentCard
 import com.doran.app.core.designsystem.BackBar
 import com.doran.app.core.designsystem.DoranFace
 import com.doran.app.core.designsystem.DoranIcon
+import com.doran.app.core.designsystem.DoranMood
 import com.doran.app.core.designsystem.DoranPalette
 import com.doran.app.core.designsystem.DoranText
 import com.doran.app.core.designsystem.Glyph
@@ -114,13 +115,15 @@ fun MusicScreen(
         Column(Modifier.width(720.dp)) {
             BackBar(back = "도란", title = "음악", onBack = onBack)
             Column(Modifier.padding(start = 48.dp, top = 8.dp)) {
+                // 재생 중에는 권하던 말 대신 지금 곡을 말한다. 도란이 다시 말하거나 듣는 중이면 그 말을 따른다
+                val talking = face.mood != DoranMood.IDLE
                 SayLine(
-                    caption.ifBlank {
-                        when {
-                            playing -> "${current?.title} 듣는 중이야"
-                            featured == null -> "어떤 곡이 좋을지 골라 볼게"
-                            else -> "지금은 ${featured.title} 어때?"
-                        }
+                    when {
+                        talking && caption.isNotBlank() -> caption
+                        playing -> "${current?.title} 듣는 중이야"
+                        caption.isNotBlank() -> caption
+                        featured == null -> "어떤 곡이 좋을지 골라 볼게"
+                        else -> "지금은 ${featured.title} 어때?"
                     },
                     maxLines = 2,
                 )
@@ -153,12 +156,14 @@ fun MusicScreen(
                 .fillMaxHeight()
                 .panel(),
         ) {
-            Text(
-                if (items.isEmpty()) "곡" else "곡 ${items.size}개",
-                style = MaterialTheme.typography.titleLarge,
-                color = DoranPalette.InkSoft,
-                modifier = Modifier.padding(start = 28.dp, top = 22.dp, bottom = 8.dp),
-            )
+            Row(Modifier.padding(start = 28.dp, end = 28.dp, top = 22.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(if (items.isEmpty()) "곡" else "곡 ${items.size}개", style = MaterialTheme.typography.titleLarge, color = DoranPalette.Ink, modifier = Modifier.weight(1f))
+                if (tracks.isNotEmpty()) {
+                    Box(Modifier.size(12.dp).background(DoranPalette.Accent, CircleShape))
+                    Spacer(Modifier.width(8.dp))
+                    Text("도란이 고른 곡", style = MaterialTheme.typography.bodyMedium, color = DoranPalette.InkSoft)
+                }
+            }
             if (items.isEmpty()) {
                 Text(
                     "기기에 넣어 둔 곡이 없어. 곡을 넣으면 여기 모여.",
@@ -168,7 +173,8 @@ fun MusicScreen(
                 )
             }
             LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
-                itemsIndexed(items, key = { _, it -> it.id }) { index, item ->
+                // 추천이 늦게 도착해 순서가 바뀌어도 맨 위(도란이 고른 곡)부터 보이게 키를 두지 않는다
+                itemsIndexed(items) { index, item ->
                     if (index > 0) Rule(Modifier.padding(horizontal = 28.dp))
                     TrackRow(item, isCurrent = item.id == nowPlaying, playing = item.id == nowPlaying && !paused, onPlay = { play(item) })
                 }
