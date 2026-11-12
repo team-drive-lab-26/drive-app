@@ -9,7 +9,9 @@ services:
     buildCommand: pip install uv && uv sync --all-packages --frozen --no-dev
     startCommand: uv run --no-sync python -m server.main
     healthCheckPath: /health
-    autoDeploy: false
+    # 제출 전까지는 develop에 올라오면 바로 다시 배포한다. 제출 뒤에는 main으로 바꾸고 자동 배포를 끈다
+    branch: develop
+    autoDeploy: true
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.8
