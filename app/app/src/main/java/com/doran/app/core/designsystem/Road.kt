@@ -49,6 +49,8 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
@@ -74,6 +76,8 @@ data class RoadSign(
     val hot: Boolean = false,
     val selected: Boolean = false,
     val ghost: Boolean = false,
+    /** 길에서 더 떨어져 세울 거리. 같은 쪽 표지판끼리 겹치지 않게 앞뒤로 엇갈려 세울 때 쓴다 */
+    val outset: Dp = 0.dp,
 )
 
 /** 거리(km)를 도로 깊이로. 가까운 곳은 넓게, 먼 곳은 지평선 쪽으로 몰린다 */
@@ -223,8 +227,14 @@ fun RoadScene(
         val margin = with(density) { 52.dp.toPx() }
         val orbTop = h - liftPx - orbPx
 
-        // 하늘, 산, 땅, 길바닥, 가드레일. 크기와 낮·밤이 바뀔 때만 다시 만든다
-        Spacer(Modifier.fillMaxSize().drawWithCache { buildLandscape(g) })
+        // 하늘, 산, 땅, 길바닥, 가드레일. 크기와 낮·밤이 바뀔 때만 다시 만든다.
+        // 도란이 매 프레임 움직여도 이 큰 그림은 다시 그리지 않도록 따로 떼어 한 장으로 둔다(소프트웨어 렌더링 에뮬레이터에서 특히 무겁다)
+        Spacer(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                .drawWithCache { buildLandscape(g) },
+        )
 
         Canvas(Modifier.fillMaxSize()) {
             drawLanes(g, phase.value)
@@ -290,7 +300,7 @@ fun RoadScene(
                 placeables.forEachIndexed { i, p ->
                     val sign = ordered[i]
                     val k = g.scale(sign.depth)
-                    val x = g.poleX(sign, margin)
+                    val x = g.poleX(sign, margin + sign.outset.toPx())
                     // 기둥이 자라는 동안에도 판이 기둥 끝에 붙어 있게, 다 자랐을 때의 바닥 기준으로 놓는다
                     val bottom = g.groundY(sign.depth)
                     p.placeWithLayer((x - p.width / 2f).roundToInt(), (bottom - p.height).roundToInt()) {

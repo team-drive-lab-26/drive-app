@@ -75,7 +75,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 # 막 부팅한 CI 에뮬레이터는 시스템 앱들이 한동안 화면을 붙잡고 있다. 그때 앱을 켜면 시스템 전체가 버벅여
 # 앱과 상관없이 "응답 없음"이 난다. 시스템이 가라앉을 때까지 기다린 뒤 시작한다
 for i in $(seq 30); do
-  [ "$(adb shell getprop sys.boot_completed | tr -d '')" = 1 ] && break
+  [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ] && break
   sleep 2
 done
 sleep 30

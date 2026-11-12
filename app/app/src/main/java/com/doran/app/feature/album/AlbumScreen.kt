@@ -49,12 +49,12 @@ import com.doran.app.core.designsystem.SayLine
 import com.doran.app.core.designsystem.panel
 
 // 길가에 세울 여행 수. 더 오래된 여행은 지평선 너머로 넘긴다
-private const val MAX_SIGNS = 6
+private const val MAX_SIGNS = 4
 
-// 표지판 깊이와 길가. 가까운 오른쪽 길가는 패널에 가려서 가까운 두 곳은 왼쪽에 세우고,
-// 지평선 쪽(패널에 안 가리는 곳)부터 양쪽에 번갈아 세워 판이 겹치지 않게 한다
-private val DEPTHS = listOf(0.07f, 0.30f, 0.78f, 0.80f, 0.90f, 0.92f)
-private val SIDES = listOf(RoadSide.LEFT, RoadSide.LEFT, RoadSide.RIGHT, RoadSide.LEFT, RoadSide.RIGHT, RoadSide.LEFT)
+// 표지판 깊이와 길에서 떨어진 거리. 오른쪽 길가는 패널에 가려서 모두 왼쪽에 세우고,
+// 먼 곳은 판이 위아래로 겹치지 않게 길에서 멀고 가까이를 엇갈려 세운다
+private val DEPTHS = listOf(0.07f, 0.30f, 0.62f, 0.80f)
+private val OUTSETS = listOf(0.dp, 0.dp, 210.dp, 0.dp)
 
 /**
  * 다녀온 여행 목록. 정차 홈의 앞길을 뒤로 돌린 '지나온 길'이다.
@@ -79,7 +79,8 @@ fun AlbumScreen(
                     // 지금 여행은 자세한 기록이 옆 패널에 있으니 표지판은 짧게
                     sub = if (trip.isCurrent) "지금 여행" else trip.detail,
                     depth = DEPTHS[i],
-                    side = SIDES[i],
+                    side = RoadSide.LEFT,
+                    outset = OUTSETS[i],
                     hot = trip.isCurrent,
                     selected = trip.sessionId == ui.selectedId,
                 ),
@@ -87,7 +88,7 @@ fun AlbumScreen(
         }
         if (!ui.loading && trips.size < 3) {
             val i = trips.size
-            add(RoadSign("next", "다음 여행", "출발하면 여기 서", DEPTHS[i], SIDES[i], ghost = true))
+            add(RoadSign("next", "다음 여행", "출발하면 여기 서", DEPTHS[i], RoadSide.LEFT, ghost = true, outset = OUTSETS[i]))
         }
     }
     Box(Modifier.fillMaxSize().background(DoranPalette.Background)) {
@@ -106,6 +107,7 @@ fun AlbumScreen(
                     ui.trips.isEmpty() -> "아직 지나온 길이 없어"
                     ui.offline -> "서버에 닿지 않아 이 기기에 있는 목소리만 보여 줄게."
                     ui.trips.size == 1 -> "첫 여행이 길가에 서 있어. 눌러서 그날 길을 다시 봐."
+                    ui.trips.size > MAX_SIGNS -> "여행 ${ui.trips.size}번 중 최근 ${MAX_SIGNS}번을 길가에 세워 뒀어. 가까울수록 최근이야."
                     else -> "여행 ${ui.trips.size}번을 길가에 세워 뒀어. 가까울수록 최근이야."
                 },
                 maxLines = 3,
