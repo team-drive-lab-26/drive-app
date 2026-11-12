@@ -4,7 +4,7 @@ import pytest
 
 from server.db import TripRepository, create_db_engine, session_factory
 from server.db.migrate import upgrade
-from server.demo_seed import TRIPS, seed_demo_trips
+from server.demo_seed import load_trips, seed_demo_trips
 from server.main import AgentService
 
 
@@ -56,10 +56,10 @@ def service(tmp_path):
 def test_seeds_every_demo_trip(service):
     agent, trips, sessions = service
 
-    assert seed_demo_trips(agent, sessions) == [session_id for session_id, *_ in TRIPS]
+    assert seed_demo_trips(agent, sessions) == [trip["session_id"] for trip in load_trips()]
 
     listed = trips.list_trips()
-    assert {trip["session_id"] for trip in listed} == {session_id for session_id, *_ in TRIPS}
+    assert {trip["session_id"] for trip in listed} == {trip["session_id"] for trip in load_trips()}
     assert all(trip["event_count"] > 0 for trip in listed)
 
 

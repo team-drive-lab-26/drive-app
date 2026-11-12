@@ -1,0 +1,99 @@
+[
+  {
+    "session_id": "demo-trip-1",
+    "days_ago": 0,
+    "departure": "08:10",
+    "events": [
+      {
+        "minute": 42,
+        "type": "stop",
+        "match": "하남드림"
+      },
+      {
+        "minute": 50,
+        "type": "capsule",
+        "id": "cap-demo-1",
+        "name": "엄마"
+      },
+      {
+        "minute": 118,
+        "type": "stop",
+        "match": "횡성(강릉)"
+      },
+      {
+        "minute": 176,
+        "type": "stop",
+        "match": "스타벅스 강릉강문해변점"
+      },
+      {
+        "minute": 190,
+        "type": "capsule",
+        "id": "cap-demo-2",
+        "name": "아이"
+      }
+    ]
+  },
+  {
+    "session_id": "demo-trip-2",
+    "days_ago": 40,
+    "departure": "09:00",
+    "events": [
+      {
+        "minute": 96,
+        "type": "stop",
+        "match": "횡성(강릉)"
+      },
+      {
+        "minute": 101,
+        "type": "capsule",
+        "id": "cap-demo-3",
+        "name": "아빠"
+      },
+      {
+        "minute": 172,
+        "type": "stop",
+        "match": "고선생 화덕생선구이"
+      },
+      {
+        "minute": 180,
+        "type": "capsule",
+        "id": "cap-demo-4",
+        "name": "아이"
+      },
+      {
+        "minute": 231,
+        "type": "stop",
+        "match": "경포호수광장"
+      },
+      {
+        "minute": 236,
+        "type": "capsule",
+        "id": "cap-demo-5",
+        "name": "엄마"
+      }
+    ]
+  },
+  {
+    "session_id": "demo-trip-3",
+    "days_ago": 89,
+    "departure": "07:40",
+    "events": [
+      {
+        "minute": 38,
+        "type": "stop",
+        "match": "하남드림"
+      },
+      {
+        "minute": 160,
+        "type": "stop",
+        "match": "테라로사 경포호수점"
+      },
+      {
+        "minute": 168,
+        "type": "capsule",
+        "id": "cap-demo-6",
+        "name": "아이"
+      }
+    ]
+  }
+]

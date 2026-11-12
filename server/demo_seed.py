@@ -6,13 +6,15 @@
 이미 있는 session_id는 건너뛰므로 서버를 여러 번 켜도 기록이 늘지 않는다.
 빈 앨범부터 찍어야 하는 화면 촬영 워크플로에서는 ``DORAN_SEED_DEMO=0``으로 끈다.
 
-여행 구성은 ``app/scripts/seed_album.py``와 같다. 그 스크립트는 켜져 있는 서버에 HTTP로 하나씩
-넣는 촬영용이고, 이 모듈은 서버가 직접 DB에 넣는다.
+여행 구성은 ``server/demo_trips.json`` 한 곳에 둔다. ``app/scripts/seed_album.py``도 같은 파일을 읽어
+켜져 있는 서버에 HTTP로 넣는다(화면 촬영용). 이 모듈은 서버가 직접 DB에 넣는다.
 """
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import select
@@ -23,54 +25,12 @@ from server.db.models import Trip, TripEvent
 KST = timezone(timedelta(hours=9))
 
 
-def _stop(name: str) -> dict[str, str]:
-    """정차 기록. 이름으로 장소·휴게소 목록에서 ID를 찾는다."""
-    return {"type": "stop", "match": name}
+TRIPS_FILE = Path(__file__).with_name("demo_trips.json")
 
 
-def _voice(capsule_id: str, speaker: str) -> dict[str, str]:
-    """목소리 기록. 남긴 사람을 이름으로 둔다."""
-    return {"type": "capsule", "id": capsule_id, "name": speaker}
-
-
-# (session_id, 며칠 전, 출발 시각(한국 시간), [(출발 후 분, 기록)])
-TRIPS: list[tuple[str, int, tuple[int, int], list[tuple[int, dict[str, str]]]]] = [
-    (
-        "demo-trip-1",
-        0,
-        (8, 10),
-        [
-            (42, _stop("하남드림")),
-            (50, _voice("cap-demo-1", "엄마")),
-            (118, _stop("횡성(강릉)")),
-            (176, _stop("스타벅스 강릉강문해변점")),
-            (190, _voice("cap-demo-2", "아이")),
-        ],
-    ),
-    (
-        "demo-trip-2",
-        40,
-        (9, 0),
-        [
-            (96, _stop("횡성(강릉)")),
-            (101, _voice("cap-demo-3", "아빠")),
-            (172, _stop("고선생 화덕생선구이")),
-            (180, _voice("cap-demo-4", "아이")),
-            (231, _stop("경포호수광장")),
-            (236, _voice("cap-demo-5", "엄마")),
-        ],
-    ),
-    (
-        "demo-trip-3",
-        89,
-        (7, 40),
-        [
-            (38, _stop("하남드림")),
-            (160, _stop("테라로사 경포호수점")),
-            (168, _voice("cap-demo-6", "아이")),
-        ],
-    ),
-]
+def load_trips() -> list[dict[str, Any]]:
+    """시연 여행 구성. app/scripts/seed_album.py도 같은 파일을 읽는다."""
+    return json.loads(TRIPS_FILE.read_text(encoding="utf-8"))
 
 
 def _existing(sessions: sessionmaker[Session]) -> set[str]:
@@ -126,14 +86,15 @@ def seed_demo_trips(service: Any, sessions: sessionmaker[Session]) -> list[str]:
         print(f"시연 여행 기록을 확인하지 못했습니다: {error}", flush=True)
         return added
 
-    for session_id, days_ago, departure, events in TRIPS:
+    for trip in load_trips():
+        session_id = trip["session_id"]
         if session_id in have:
             continue
         try:
             minutes: list[int] = []
-            for minute, record in events:
-                body = dict(record)
-                name = body.pop("match", None)
+            for event in trip["events"]:
+                body = {key: value for key, value in event.items() if key not in ("minute", "match")}
+                name = event.get("match")
                 if name is not None:
                     found = _catalog_id(service, name)
                     if found is None:
@@ -141,8 +102,9 @@ def seed_demo_trips(service: Any, sessions: sessionmaker[Session]) -> list[str]:
                         continue
                     body["id"] = found
                 service.record({"session_id": session_id, **body})
-                minutes.append(minute)
-            _backdate(sessions, session_id, _start_time(days_ago, departure), minutes)
+                minutes.append(event["minute"])
+            hour, minute = map(int, trip["departure"].split(":"))
+            _backdate(sessions, session_id, _start_time(trip["days_ago"], (hour, minute)), minutes)
             added.append(session_id)
         except Exception as error:  # noqa: BLE001 - 한 여행이 실패해도 나머지는 넣는다
             print(f"시연 여행 {session_id}을 넣지 못했습니다: {error}", flush=True)
