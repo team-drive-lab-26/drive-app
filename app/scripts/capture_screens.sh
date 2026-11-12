@@ -62,7 +62,10 @@ go --es mood speaking --es caption "'다음 휴게소는 하남드림이야. 12k
 shot 13_주행_말하는중 2
 go --es mood happy --es caption "'하남드림 휴게소를 경유지로 넣었어'"
 shot 14_주행_기쁨 2
-go --es mood none --es gear P --es onboarded yes --es route home --es demo tape --es caption - --es battery 78 --es seats 3
+# 기어를 바꾼 뒤 화면을 옮긴다. 한 인텐트에 같이 보내면 주행 화면을 걷으며 정차 화면까지 같이 닫힐 수 있다
+go --es mood none --es gear P --es onboarded yes --es demo tape --es caption - --es battery 78 --es seats 3
+sleep 3
+go --es route home
 shot 15_정차_홈
 go --es say "'근처 맛집 추천해 줘'"
 shot 16_정차_제안카드 6
