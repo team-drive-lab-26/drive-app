@@ -169,8 +169,9 @@ private fun RecordAskPanel(place: String, onAnswer: (Boolean) -> Unit, modifier:
             }
             Spacer(Modifier.width(18.dp))
             Column {
-                Text(place, style = MaterialTheme.typography.headlineMedium, color = DoranPalette.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("목소리 15초", style = DoranText.number.copy(fontSize = 20.sp), color = DoranPalette.InkSoft)
+                // 도란이 물은 말은 듣는 동안 자막에서 사라지므로 패널 제목으로 남겨 둔다
+                Text("한마디 남길래?", style = MaterialTheme.typography.headlineMedium, color = DoranPalette.Ink)
+                Text("$place · 15초", style = DoranText.number.copy(fontSize = 20.sp), color = DoranPalette.InkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         Spacer(Modifier.height(16.dp))

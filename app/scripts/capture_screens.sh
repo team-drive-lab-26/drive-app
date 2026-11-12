@@ -66,6 +66,8 @@ go --es mood none --es gear P --es onboarded yes --es route home --es demo tape 
 shot 15_정차_홈
 go --es say "'근처 맛집 추천해 줘'"
 shot 16_정차_제안카드 6
+go --es say "'가볼 만한 곳 추천해 줘'"
+shot 16b_정차_제안카드_사진 8
 go --es say "'휴게소 어디야'"
 shot 17_정차_휴게소카드 6
 go --es battery 15
@@ -131,6 +133,8 @@ adb shell input keyevent KEYCODE_BACK
 
 # 시연 흐름(docs/app/README.md '시연 범위' 순서): 주행 중 휴게소 제안 → 경유지 → 도착해 세우면 "한마디 남길래?" → 녹음 → 다시 타면 재탑승 제안
 go --es route home --es caption -
+# 화면 이동이 끝난 뒤 기어를 바꿔야 정차 화면이 주행 화면 위로 다시 올라오지 않는다
+sleep 3
 go --es gear D --es caption -
 sleep 3
 go --es event continuous_drive
