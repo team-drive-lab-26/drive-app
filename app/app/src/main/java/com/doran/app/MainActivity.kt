@@ -1,10 +1,5 @@
 package com.doran.app
 
-import com.doran.app.core.data.Preferences
-import java.time.ZoneId
-import java.time.LocalTime
-import kotlinx.coroutines.delay
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.LaunchedEffect
 import android.Manifest
 import android.content.Intent
@@ -46,6 +41,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private val preferences get() = (application as DoranApplication).container.preferences
+    private val daylight get() = (application as DoranApplication).container.daylight
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,21 +65,9 @@ class MainActivity : ComponentActivity() {
             currentSessionId = (application as DoranApplication).container.tripCoordinator.sessionId,
         )
         setContent {
-            val prefs by preferences.state.collectAsStateWithLifecycle()
-            // 자동이면 1분마다 시각을 다시 보고 낮·밤을 바꾼다
-            val minute by produceState(0) {
-                while (true) {
-                    value += 1
-                    delay(60_000)
-                }
-            }
-            LaunchedEffect(prefs.screen, minute) {
-                DoranPalette.isDay = when (prefs.screen) {
-                    Preferences.SCREEN_DAY -> true
-                    Preferences.SCREEN_NIGHT -> false
-                    else -> LocalTime.now(ZoneId.of("Asia/Seoul")).hour in 7..18
-                }
-            }
+            // 낮·밤은 DaylightSource 한 곳에서 정한다(설정 → 전조등 → 시각)
+            val isDay by daylight.isDay.collectAsStateWithLifecycle()
+            LaunchedEffect(isDay) { DoranPalette.isDay = isDay }
             DoranTheme {
                 val ui by viewModel.uiState.collectAsStateWithLifecycle()
                 Column(Modifier.fillMaxSize().background(DoranPalette.Background)) {
