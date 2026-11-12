@@ -81,6 +81,16 @@ done
 sleep 30
 adb shell pm clear $PKG > /dev/null
 adb shell pm grant $PKG android.permission.RECORD_AUDIO || true
+# CI 에뮬레이터는 GPU 없이 소프트웨어로 그려서, 앱을 처음 켤 때 그래픽 셰이더를 만드는 데 몇 초씩 걸린다.
+# 그 사이 "응답 없음"이 나기도 해서 한 번 켜 두고(셰이더는 기기에 남는다) 끈 뒤 처음 설정부터 다시 시작한다.
+# 준비 중에 난 응답 없음은 따로 적는다
+adb logcat -c
+adb shell am start -W -n $PKG/.MainActivity > /dev/null
+sleep 60
+WARM_ANR=$(adb logcat -d | grep -c "ANR in $PKG")
+note "준비(첫 실행) 중 응답 없음: ${WARM_ANR}번"
+adb shell am force-stop $PKG
+sleep 3
 adb logcat -c
 adb shell am start -W -n $PKG/.MainActivity > /dev/null
 sleep 8

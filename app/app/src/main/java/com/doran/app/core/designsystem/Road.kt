@@ -464,9 +464,9 @@ private fun androidx.compose.ui.draw.CacheDrawScope.buildLandscape(g: RoadGeomet
         drawPath(gravelL, DoranPalette.Shoulder)
         drawPath(gravelR, DoranPalette.Shoulder)
         drawPath(road, roadBrush)
-        drawPoints(grainDark, PointMode.Points, Color.Black.copy(alpha = if (day) 0.16f else 0.32f), strokeWidth = grainSize * 1.6f, cap = StrokeCap.Round)
-        drawPoints(grainLight, PointMode.Points, Color.White.copy(alpha = if (day) 0.10f else 0.035f), strokeWidth = grainSize * 1.6f, cap = StrokeCap.Round)
-        drawPoints(grainNear, PointMode.Points, Color.White.copy(alpha = if (day) 0.09f else 0.04f), strokeWidth = grainSize * 3f, cap = StrokeCap.Round)
+        drawPoints(grainDark, PointMode.Points, Color.Black.copy(alpha = if (day) 0.16f else 0.32f), strokeWidth = grainSize * 1.6f, cap = StrokeCap.Square)
+        drawPoints(grainLight, PointMode.Points, Color.White.copy(alpha = if (day) 0.10f else 0.035f), strokeWidth = grainSize * 1.6f, cap = StrokeCap.Square)
+        drawPoints(grainNear, PointMode.Points, Color.White.copy(alpha = if (day) 0.09f else 0.04f), strokeWidth = grainSize * 3f, cap = StrokeCap.Square)
         wetSheen?.let { drawPath(road, it) }
         edges.forEach { drawPath(it, DoranPalette.EdgeLine.copy(alpha = if (day) 0.95f else 0.55f)) }
         // 가드레일 기둥 → 빔 → 반사판 순서로 쌓는다
