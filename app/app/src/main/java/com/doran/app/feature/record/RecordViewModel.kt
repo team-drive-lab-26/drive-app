@@ -7,8 +7,10 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.doran.app.DoranApplication
 import com.doran.app.core.data.AppPreferences
+import com.doran.app.core.data.VehicleStateSource
 import com.doran.app.core.media.CapsuleRecorder
 import com.doran.app.core.media.CapsuleStore
+import com.doran.app.core.media.MusicPlayer
 import com.doran.app.core.trip.TripCoordinator
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -33,13 +35,15 @@ data class RecordUiState(
 
 /**
  * 15초 목소리 캡슐. 화면에 들어오면 바로 녹음하고, 끝나면 누가 남겼는지 고른다.
- * 녹음하는 동안은 "도란아" 대기를 멈춰 마이크가 겹치지 않게 한다.
+ * 녹음하는 동안은 "도란아" 대기를 멈춰 마이크가 겹치지 않게 하고, 음악을 멈추고 송풍을 낮춰 목소리만 담기게 한다.
  */
 class RecordViewModel(
     private val coordinator: TripCoordinator,
     private val recorder: CapsuleRecorder,
     private val store: CapsuleStore,
     preferences: AppPreferences,
+    private val music: MusicPlayer,
+    private val vehicle: VehicleStateSource,
 ) : ViewModel() {
     private val capsuleId = store.newId()
     private val _state = MutableStateFlow(
@@ -48,8 +52,13 @@ class RecordViewModel(
     val state: StateFlow<RecordUiState> = _state.asStateFlow()
     private var ticker: Job? = null
 
+    // 녹음 때문에 멈춘 음악만 다시 튼다. 원래 멈춰 있던 음악은 그대로 둔다
+    private val musicWasPlaying = music.nowPlaying.value != null && !music.paused.value
+
     init {
         coordinator.pauseStandby()
+        if (musicWasPlaying) music.pause()
+        vehicle.lowerFan()
         if (recorder.start(store.file(capsuleId))) startTicker() else _state.update { it.copy(phase = RecordPhase.FAILED) }
     }
 
@@ -73,6 +82,7 @@ class RecordViewModel(
         if (_state.value.phase != RecordPhase.RECORDING) return
         ticker?.cancel()
         recorder.stop()
+        restoreCabin()
         _state.update {
             // 1초도 안 되는 녹음은 실수로 보고 버린다
             if (it.elapsedMs < MIN_MS || !store.has(capsuleId)) it.copy(phase = RecordPhase.FAILED, level = 0f)
@@ -91,9 +101,19 @@ class RecordViewModel(
         if (_state.value.phase == RecordPhase.DONE) return
         ticker?.cancel()
         recorder.stop()
+        restoreCabin()
         store.delete(capsuleId)
         coordinator.resumeStandby()
         _state.update { it.copy(phase = RecordPhase.DONE) }
+    }
+
+    private var cabinRestored = false
+
+    private fun restoreCabin() {
+        if (cabinRestored) return
+        cabinRestored = true
+        vehicle.restoreFan()
+        if (musicWasPlaying) music.resume()
     }
 
     override fun onCleared() {
@@ -108,7 +128,14 @@ class RecordViewModel(
         val Factory = viewModelFactory {
             initializer {
                 val container = (this[APPLICATION_KEY] as DoranApplication).container
-                RecordViewModel(container.tripCoordinator, container.recorder, container.capsules, container.preferences)
+                RecordViewModel(
+                    container.tripCoordinator,
+                    container.recorder,
+                    container.capsules,
+                    container.preferences,
+                    container.musicPlayer,
+                    container.vehicleStateSource,
+                )
             }
         }
     }
