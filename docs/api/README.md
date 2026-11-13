@@ -1,6 +1,6 @@
-# 앱 ↔ 로컬 AI 서버 API (시연 계약)
+# 앱 ↔ AI 서버 API
 
-서버 실행은 [server/README.md](../../server/README.md)를 참고합니다. 기본 주소는 서버에서 `127.0.0.1:8765`, Android 에뮬레이터에서 `10.0.2.2:8765`입니다. 일반 HTTP와 인증 없는 세션 ID를 쓰므로 로컬 시연에만 사용합니다.
+서버 실행 방법은 [server/README.md](../../server/README.md)에 있습니다. 로컬 주소는 서버에서 `127.0.0.1:8765`, Android 에뮬레이터에서 `10.0.2.2:8765`입니다. 심사·시연용 서버는 `https://doran-agent.onrender.com`(`render.yaml`)에 있습니다. 인증 없이 세션 ID만 쓰므로 시연용으로만 씁니다.
 
 ## `POST /v1/agent/respond`
 
@@ -16,7 +16,7 @@
 {"session_id":"demo-1","kind":"user_utterance","vehicle":{"gear":"D"},"utterance":"근처 어디가 좋아?"}
 ```
 
-응답은 AI 계약의 `status`, `speech`, `caption`, `proposal_type`, `selected_place_id`, `selected_track_id`, `cards`, `commands`에 `effects` 배열을 더합니다. `commands`는 서버 내부 상태 갱신 요청이고, `effects`만 앱이 처리합니다. `effects`에는 `ADD_WAYPOINT`(`place`: ID·이름·위도·경도·선택적 `navi_poi_id`·`navi_poi_sub_id`·주소), `PLAY_MUSIC`(`track_id`), `PLAY_CAPSULE`(`capsule_id`)가 나올 수 있습니다. `PLAY_MUSIC`·`PLAY_CAPSULE`은 재생 완료가 아닌 실행 요청입니다. 좌표가 없는 장소는 내비 효과를 반환하지 않습니다. 내비 POI ID는 없으면 `null`이고, 앱은 좌표만으로 경유지를 추가합니다. 관광 API의 콘텐츠 ID와 Pleos NaviHelper의 POI ID는 별개로 관리합니다.
+응답은 AI 계약의 `status`, `speech`, `caption`, `proposal_type`, `selected_place_id`, `selected_track_id`, `cards`, `commands`에 `effects` 배열을 더합니다. `commands`는 서버 내부 상태 갱신 요청이고, `effects`만 앱이 처리합니다. `effects`에는 `ADD_WAYPOINT`(`place`: ID·이름·위도·경도·선택적 `navi_poi_id`·`navi_poi_sub_id`·주소), `PLAY_MUSIC`(`track_id`), `PLAY_CAPSULE`(`capsule_id`)가 나올 수 있습니다. `PLAY_MUSIC`·`PLAY_CAPSULE`은 재생해 달라는 요청이고 재생이 끝났다는 뜻은 아닙니다. 좌표가 없는 장소는 내비 효과를 반환하지 않습니다. 내비 POI ID는 없으면 `null`이고, 앱은 좌표만으로 경유지를 추가합니다. 관광 API의 콘텐츠 ID와 Pleos NaviHelper의 POI ID는 별개로 관리합니다.
 
 정차 중 카드에서 장소를 고를 때는 `selected_place_id`를 보낼 수 있습니다. 서버는 같은 세션에서 최근 2분 안에 제시한 장소만 받습니다. 곡의 `selected_track_id`도 최근 5분 안에 추천한 곡과 일치해야 합니다. 오래된 ID나 다른 세션의 ID를 요청에 넣어도 선택 상태가 되살아나지 않습니다.
 
@@ -26,7 +26,7 @@
 {"session_id":"demo-1","type":"mention","id":"place-1","name":"별빛 카페","category":"cafe"}
 ```
 
-`type`은 `mention`, `stop`, `capsule` 중 하나입니다. `stop`·`capsule`에는 `id`만 필요합니다. 선택적으로 `latitude`·`longitude`(숫자)를 보내면 앨범 핀 위치로 저장합니다. 성공하면 `{"status":"ok"}`를 반환합니다. 이 API는 음성 파일을 업로드하지 않고 **기록 메타데이터만** 서버 DB(`trip_events`)에 저장합니다. 서버를 다시 켜도 같은 `session_id`의 기록이 남습니다. 저장 구조는 [docs/db](../db/README.md)를 따릅니다.
+`type`은 `mention`, `stop`, `capsule` 중 하나입니다. `stop`·`capsule`에는 `id`만 필요합니다. 선택적으로 `latitude`·`longitude`(숫자)를 보내면 앨범 핀 위치로 저장합니다. 성공하면 `{"status":"ok"}`를 반환합니다. 음성 파일은 올리지 않고 언제 어디서 무엇을 했는지만 서버 DB(`trip_events`)에 저장합니다. 서버를 다시 켜도 같은 `session_id`의 기록이 남습니다. 저장 구조는 [docs/db](../db/README.md)를 따릅니다.
 
 `stop`의 `id`가 후보 목록(장소·휴게소)에 있으면 서버가 이름과 좌표를 채웁니다. 목록에 없는 곳은 `name`만 함께 보내면 이름이 남습니다. `capsule`의 `name`에는 남긴 사람을 넣습니다.
 
@@ -60,12 +60,12 @@
 
 정차 중 응답의 `cards`에는 `kind`(`place`/`rest_stop`), `category`, `address`, `summary`(한 줄 설명), `image_url`, `distance_km`가 붙습니다. 곡 카드는 `track_id`, `name`, `artist`, `tags`를 줍니다.
 
-`GET /health`는 서버 동작 상태를 알려 줍니다. 잘못된 요청은 HTTP 400과 `{"error":"invalid_request"}`, 없는 경로는 404를 반환합니다. 서버가 닿지 않으면 앱은 연결 실패 자막을 보여 줍니다.
+`GET /health`로 서버가 살아 있는지 봅니다. 잘못된 요청에는 HTTP 400과 `{"error":"invalid_request"}`, 없는 경로에는 404를 돌려줍니다. 서버가 닿지 않으면 앱은 연결 실패 자막을 보여 줍니다.
 
 ## Android 시연 연결
 
-디버그 앱은 `BuildConfig.AGENT_BASE_URL=http://10.0.2.2:8765`를 사용하고 HTTP 통신을 허용합니다. 포트가 다르면 `app/local.properties`에 `doran.agentBaseUrl=http://10.0.2.2:<포트>`를 넣습니다. 앱은 Retrofit으로 호출하며 요청·응답 형식은 `core/network/AgentDtos.kt`에 있습니다. 릴리스 빌드의 주소는 비어 있어 운영 서버를 결정하기 전에는 AI 호출을 시작하지 않습니다. 앱은 정차 중 텍스트 입력 시연 패널, 주행 중 음성 입력 버튼·한 줄 자막을 사용합니다. 기어와 문 열림은 Pleos Vehicle SDK에서, 남은 시간·경로 거리·경유지/목적지 도착은 NaviHelper에서 받습니다. 음성은 Pleos TextToSpeech·SpeechToText 온디바이스 모드를 쓰고, Pleos 음성 서비스가 없으면 Android 기본 음성으로 넘어갑니다.
+디버그 앱은 `BuildConfig.AGENT_BASE_URL=http://10.0.2.2:8765`를 쓰고 HTTP 통신을 허용합니다. 포트가 다르면 `app/local.properties`에 `doran.agentBaseUrl=http://10.0.2.2:<포트>`를 넣습니다. release 앱은 `app/gradle.properties`의 `doran.releaseAgentBaseUrl`(호스팅 서버 주소)을 씁니다. 앱은 Retrofit으로 호출하고, 요청·응답 형식은 `core/network/AgentDtos.kt`에 있습니다. 디버그 빌드에서는 도란을 길게 눌러 여는 디버그 패널에서 발화를 글로 넣을 수 있습니다. 기어와 문 열림은 Pleos Vehicle SDK에서, 남은 시간·경로 거리·경유지/목적지 도착은 NaviHelper에서 받습니다. 음성은 Pleos TextToSpeech·SpeechToText 온디바이스 모드를 쓰고, Pleos 음성 서비스가 없으면 Android 기본 음성으로 바꿉니다.
 
 앱은 차량 이벤트를 스스로 판단해 보냅니다. `trip_started`는 처음 D로 바꿨을 때 경로가 있으면 바로, 없으면 2분 뒤 한 번 보냅니다. `arrival_30m`은 남은 시간이 30분 이하가 되면 목적지마다 한 번, `continuous_drive`는 15분 이상 쉬지 않고 110분 달렸을 때, `reboarded`는 P에서 문을 열었다가 15분 넘게 정차한 뒤 닫았을 때 보냅니다. 요청의 `vehicle`에는 `doors_closed`, `last_stop_minutes`, `continuous_driving_minutes`와 Vehicle SDK에서 받은 `battery_percent`, `passenger_count`, `wiper_on`, `headlight_on`을, `navigation`에는 `eta_minutes`, `arrival_local_time`, `minutes_since_departure`를 채웁니다. 집 위치를 아직 받지 않아 `distance_from_home_km`에는 출발 때 잡은 경로 거리를 넣습니다. `return_started`는 아직 보내지 않습니다. 내비 도착 뒤 10분 안에 P로 세우면 `/v1/trip/record`에 `stop`으로 기록하며, 앱이 추가한 경유지는 서버 장소 ID를, 그 밖의 장소는 `navi-<이름>`을 ID로 씁니다.
 
-경유지 효과는 [Pleos NaviHelper v3.0.5 경유지 API](https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/NaviHelper/waypoint-settings)에 전달합니다. 앱은 SDK 연결 후 요청을 보내고 오류 콜백을 자막으로 표시합니다. `navi_poi_id`가 없으면 좌표와 이름만 보냅니다. 에뮬레이터 내비에서 좌표만으로 경유지가 추가되는 것을 확인했습니다.
+경유지 효과는 [Pleos NaviHelper v3.0.5 경유지 API](https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/NaviHelper/waypoint-settings)로 넣습니다. 앱은 SDK에 연결한 뒤 요청을 보내고, 오류가 오면 자막으로 알립니다. `navi_poi_id`가 없으면 좌표와 이름만 보냅니다. 에뮬레이터 내비에서 좌표만으로 경유지가 추가되는 것을 확인했습니다.
