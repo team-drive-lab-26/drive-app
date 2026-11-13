@@ -31,8 +31,11 @@ interface VehicleStateSource {
     fun start() = Unit
     fun release() = Unit
 
-    /** 녹음하는 동안 송풍 소리가 목소리를 덮지 않게 바람을 가장 약하게 줄인다. [restoreFan]으로 원래 세기로 되돌린다 */
-    fun lowerFan() = Unit
+    /**
+     * 녹음하는 동안 송풍 소리가 목소리를 덮지 않게 바람을 가장 약하게 줄인다. [restoreFan]으로 원래 세기로 되돌린다.
+     * 실제로 줄였을 때만 [onLowered]를 부른다(공조가 꺼져 있거나 지원하지 않으면 부르지 않는다)
+     */
+    fun lowerFan(onLowered: () -> Unit = {}) = Unit
     fun restoreFan() = Unit
 
     /** 디버그 막대에서 기어를 바꾼다. 실제 차량 값이 오면 그 값으로 덮인다 */
@@ -129,7 +132,7 @@ class PleosVehicleStateSource(context: Context) : VehicleStateSource {
         }
     }
 
-    override fun lowerFan() {
+    override fun lowerFan(onLowered: () -> Unit) {
         if (!started || fanLowered) return
         fanLowered = true
         try {
@@ -142,7 +145,10 @@ class PleosVehicleStateSource(context: Context) : VehicleStateSource {
                         // 그사이 녹음이 끝났으면 낮추지 않는다
                         if (fanLowered && speed != null && speed > quiet) {
                             fanBefore[area] = speed
-                            hvac.setHvacFanSpeed(area, quiet, { _, now -> Log.i(TAG, "녹음 중 송풍 $speed → $now") }, { e -> Log.w(TAG, "송풍을 낮추지 못함", e) })
+                            hvac.setHvacFanSpeed(area, quiet, { _, now ->
+                                Log.i(TAG, "녹음 중 송풍 $speed → $now")
+                                onLowered()
+                            }, { e -> Log.w(TAG, "송풍을 낮추지 못함", e) })
                         }
                     }, { e -> Log.w(TAG, "송풍 세기를 받지 못함", e) })
                 }

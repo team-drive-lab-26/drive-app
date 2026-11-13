@@ -121,6 +121,8 @@ fun MusicScreen(
                     when {
                         talking && caption.isNotBlank() -> caption
                         playing -> "다른 곡이 듣고 싶으면 말해 줘"
+                        // 멈춘 곡이 있으면 그 곡 이야기를 한다. 아래 재생 칸과 다른 곡을 권하면 무엇을 누를지 헷갈린다
+                        current != null -> "${current.title} 이어서 들을래?"
                         caption.isNotBlank() -> caption
                         featured == null -> "어떤 곡이 좋을지 골라 볼게"
                         else -> "지금은 ${featured.title} 어때?"

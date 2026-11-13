@@ -29,6 +29,9 @@ data class RecordUiState(
     val level: Float = 0f,
     val family: List<String> = emptyList(),
     val placeName: String = "",
+    /** 녹음 때문에 멈춘 것. 왜 조용해졌는지 화면에 한 줄로 알린다 */
+    val musicPaused: Boolean = false,
+    val fanLowered: Boolean = false,
 ) {
     val remainingSeconds: Int get() = ((CapsuleRecorder.MAX_MS - elapsedMs + 999) / 1000).toInt().coerceAtLeast(0)
 }
@@ -58,7 +61,8 @@ class RecordViewModel(
     init {
         coordinator.pauseStandby()
         if (musicWasPlaying) music.pause()
-        vehicle.lowerFan()
+        _state.update { it.copy(musicPaused = musicWasPlaying) }
+        vehicle.lowerFan { _state.update { it.copy(fanLowered = true) } }
         if (recorder.start(store.file(capsuleId))) startTicker() else _state.update { it.copy(phase = RecordPhase.FAILED) }
     }
 

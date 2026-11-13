@@ -232,18 +232,18 @@ fun PersonDot(name: String, modifier: Modifier = Modifier) {
 
 /** 가족 이름 버튼. 그 사람 색 점이 앞에 붙는다 */
 @Composable
-fun RibbonButton(name: String, onClick: () -> Unit, modifier: Modifier = Modifier, trailing: String = "") {
+fun RibbonButton(name: String, onClick: () -> Unit, modifier: Modifier = Modifier, trailing: String = "", large: Boolean = false) {
     OutlinedButton(
         onClick = onClick,
         shape = DoranButtonShape,
-        modifier = modifier.heightIn(min = 72.dp),
-        contentPadding = PaddingValues(start = 22.dp, end = 28.dp),
+        modifier = modifier.heightIn(min = if (large) 96.dp else 72.dp),
+        contentPadding = if (large) PaddingValues(start = 30.dp, end = 38.dp) else PaddingValues(start = 22.dp, end = 28.dp),
         border = BorderStroke(2.dp, DoranPalette.LineStrong),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = DoranPalette.Ink),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            PersonDot(name, Modifier.size(22.dp))
-            Text(name, style = MaterialTheme.typography.titleLarge)
+            PersonDot(name, Modifier.size(if (large) 28.dp else 22.dp))
+            Text(name, style = if (large) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.titleLarge)
             if (trailing.isNotBlank()) Text(trailing, style = MaterialTheme.typography.bodyMedium, color = DoranPalette.InkSoft)
         }
     }

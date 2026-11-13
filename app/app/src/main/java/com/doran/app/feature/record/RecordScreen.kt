@@ -83,11 +83,15 @@ fun RecordScreen(onClose: () -> Unit, viewModel: RecordViewModel = viewModel(fac
         Row(Modifier.fillMaxWidth().padding(start = 48.dp, end = 48.dp, top = 32.dp), verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
                 when (ui.phase) {
-                    RecordPhase.RECORDING -> Heading("${place}에서 한마디", "듣고 있어. 15초 안에 말하면 돼.")
-                    RecordPhase.CHOOSE_SPEAKER -> Heading(
-                        "누가 남겼어?",
-                        "${ui.elapsedMs.coerceAtMost(CapsuleRecorder.MAX_MS) / 1000}초 녹음했어. 고르면 앨범 지도에 그 사람 색 핀으로 남길게.",
-                    )
+                    RecordPhase.RECORDING -> Heading("${place}에서 한마디", recordingHint(ui))
+                    RecordPhase.CHOOSE_SPEAKER -> {
+                        Heading(
+                            "누가 남겼어?",
+                            "${ui.elapsedMs.coerceAtMost(CapsuleRecorder.MAX_MS) / 1000}초 녹음했어. 고르면 앨범 지도에 그 사람 색 핀으로 남길게.",
+                        )
+                        Spacer(Modifier.height(32.dp))
+                        ChooseSpeaker(ui.family, onChoose = viewModel::chooseSpeaker)
+                    }
                     RecordPhase.FAILED -> Heading("녹음하지 못했어", "마이크 권한을 확인하거나 조금 더 길게 말해 줘.")
                     RecordPhase.DONE -> Unit
                 }
@@ -108,7 +112,6 @@ fun RecordScreen(onClose: () -> Unit, viewModel: RecordViewModel = viewModel(fac
                     DoranSecondaryButton(text = "그만둘래", onClick = viewModel::cancel, modifier = Modifier.align(Alignment.CenterEnd))
                 }
                 RecordPhase.CHOOSE_SPEAKER -> {
-                    ChooseSpeaker(ui.family, onChoose = viewModel::chooseSpeaker)
                     DoranSecondaryButton(text = "지우기", onClick = viewModel::cancel, modifier = Modifier.align(Alignment.CenterEnd))
                 }
                 RecordPhase.FAILED -> DoranPrimaryButton(text = "돌아가기", onClick = viewModel::cancel)
@@ -116,6 +119,17 @@ fun RecordScreen(onClose: () -> Unit, viewModel: RecordViewModel = viewModel(fac
             }
         }
     }
+}
+
+/** 녹음하는 동안 음악·송풍을 줄였다면 왜 조용해졌는지 같이 말한다 */
+private fun recordingHint(ui: RecordUiState): String {
+    val quieted = when {
+        ui.musicPaused && ui.fanLowered -> "목소리 잘 담기게 음악을 멈추고 바람을 줄였어."
+        ui.musicPaused -> "목소리 잘 담기게 음악을 잠깐 멈췄어."
+        ui.fanLowered -> "목소리 잘 담기게 바람을 줄였어."
+        else -> ""
+    }
+    return "듣고 있어. 15초 안에 말하면 돼. $quieted".trim()
 }
 
 @Composable
@@ -129,12 +143,12 @@ private fun Heading(title: String, body: String) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ChooseSpeaker(family: List<String>, onChoose: (String) -> Unit) {
-    // 가운데 도란을 피해 왼쪽 길가 쪽에만 놓는다
+    // 질문 바로 아래에 크게 둔다. 뒷자리에서 손을 뻗어도 누르기 쉽게 한 줄에 큰 버튼으로 놓는다
     FlowRow(
-        Modifier.width(360.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        Modifier.width(860.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        family.forEach { name -> RibbonButton(name = name, onClick = { onChoose(name) }) }
+        family.forEach { name -> RibbonButton(name = name, onClick = { onChoose(name) }, large = true) }
     }
 }

@@ -143,8 +143,21 @@ private fun StopList(
             val km = routeKm(ui.route)
             Row(Modifier.padding(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (km > 0) SummaryChip("${km}km")
-                SummaryChip("${ui.pins.size}곳")
-                SummaryChip("목소리 ${voiceCount}개")
+                if (ui.pins.isNotEmpty()) {
+                    SummaryChip("${ui.pins.size}곳")
+                    SummaryChip("목소리 ${voiceCount}개")
+                }
+            }
+        }
+        // 아직 들른 곳이 없으면 왼쪽 칸이 비어 보이지 않게 무엇이 쌓이는지 알려 준다
+        if (ui.pins.isEmpty() && !ui.loading) {
+            item {
+                Text(
+                    "차를 세운 곳과 그곳에서 남긴 목소리가 여기에 차례로 쌓여.",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = DoranPalette.InkSoft,
+                    modifier = Modifier.padding(top = 12.dp, end = 24.dp),
+                )
             }
         }
         itemsIndexed(ui.pins, key = { _, pin -> pin.id }) { index, pin ->
