@@ -6,6 +6,8 @@ import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.webkit.RenderProcessGoneDetail
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -268,6 +270,14 @@ private fun WebMap(ui: AlbumMapUiState, onSelect: (String) -> Unit, onFailed: ()
             webChromeClient = object : WebChromeClient() {
                 override fun onConsoleMessage(message: ConsoleMessage): Boolean {
                     Log.d("DoranMap", "${message.message()} (${message.lineNumber()})")
+                    return true
+                }
+            }
+            // 지도 그리기 프로세스가 죽으면(그래픽 메모리 부족 등) 앱까지 끝나지 않게 받아서 평면 지도로 바꾼다
+            webViewClient = object : WebViewClient() {
+                override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+                    Log.w("DoranMap", "지도 그리기 중단, 평면 지도로 바꿈 (crash=${detail.didCrash()})")
+                    post { giveUp() }
                     return true
                 }
             }
