@@ -16,6 +16,23 @@
 | 3D 지도 앨범 | 다녀온 경로를 3D 지도로 보여 주고, 핀을 누르면 그 자리의 목소리가 나옵니다 |
 | 차량 맥락 | 기어·도어·배터리·전조등·탑승 인원을 읽어 제안과 화면(낮/밤)을 바꿉니다 |
 
+## 사용한 Pleos SDK
+
+| SDK | 버전 | 쓰는 곳 |
+| --- | --- | --- |
+| Vehicle | 2.3.2 | 기어·도어·배터리·전조등·와이퍼·안전벨트(탑승 인원)를 읽어 주행/정차 화면, 제안 시점, 낮/밤 화면을 정합니다. 녹음하는 동안에는 송풍을 가장 약하게 줄였다가 되돌립니다 |
+| NaviHelper | 3.0.5 | 목적지·남은 거리와 시간을 받고, 고른 곳을 경유지로 넣고, 도착을 알아챕니다 |
+| SpeechToText | 3.3.1 | "도란아" 호출과 이어지는 말을 듣습니다 |
+| TextToSpeech | 3.3.1 | 도란의 대답을 읽어 줍니다 |
+
+## 테스트 환경
+
+| | |
+| --- | --- |
+| 에뮬레이터 | Pleos Connect v2.1.0 (Android 14, API 34, arm64-v8a) |
+| 화면 | 2560 × 1440, 160dpi, 가로 |
+| 개발 PC | macOS (Apple Silicon) |
+
 ## 빠르게 실행해 보기
 
 ### 설치만 하고 보기
@@ -33,7 +50,7 @@ adb install -r app-release.apk
 | | 버전 |
 | --- | --- |
 | JDK | 17 또는 21 (Gradle 8.13은 JDK 25에서 실행되지 않습니다) |
-| Android Studio | 에뮬레이터 API 34 이상 |
+| Android Studio | Pleos Connect v2.1.0 에뮬레이터 |
 | Python | 3.12 이상, [uv](https://docs.astral.sh/uv/) |
 
 **API 키는 없어도 됩니다.** 장소·휴게소·곡 데이터는 저장소(`ai/data/gangneung/`)에 이미 들어 있고, LLM 키가 없으면 서버가 규칙만으로 대답합니다.
@@ -108,13 +125,13 @@ adb shell am start -n com.doran.app/.MainActivity --es say "휴게소 어디야"
 ```bash
 uv run pytest                     # 전체 테스트
 uv run ruff check . && uv run ruff format .
-uv run doran-collect              # TourAPI로 ai/data/<지여>/places.json 생성
+uv run doran-collect              # TourAPI로 ai/data/<지역>/places.json 생성
 cd app && ./gradlew test          # 앱 단위 테스트
 ```
 
 Python 패키지는 uv 워크스페이스로 관리합니다. 루트 `pyproject.toml`이 `ai`, `server`를 묶고 `uv.lock`으로 버전을 고정합니다. `pip install`로 따로 설치하지 않습니다. 의존성 추가는 `uv add --package doran-ai <패키지>`처럼 해당 패키지를 지정하고, 개발 도구는 `uv add --dev <패키지>`로 루트에 둡니다.
 
-서버 DB는 SQLAlchemy·Alembic으로 관리하고 기본값은 `server/var/doran.db`(SQLite)입니다. 스키마 변경 절차는 [docs/db](docs/db/README.md)를 따르니다. 서버는 `127.0.0.1:8765`에만 바인딩하고 인증이 없으므로 로컬 시연에만 씁니다.
+서버 DB는 SQLAlchemy·Alembic으로 관리하고 기본값은 `server/var/doran.db`(SQLite)입니다. 스키마 변경 절차는 [docs/db](docs/db/README.md)를 따릅니다. 서버는 `127.0.0.1:8765`에만 바인딩하고 인증이 없으므로 로컬 시연에만 씁니다.
 
 에이전트가 읽는 데이터는 `ai/data/<지역>/`에 있습니다. `route.json`(시연 경로), `places.json`(관광 정보), `rest_stops.json`(휴게소), `tracks.json`(곡 목록)입니다. 서버는 `DORAN_CATALOG_FILE`이 없으면 이 폴더를 읽고, 요청마다 현재 위치와 발화에 맞춰 후보 순서를 정합니다.
 
@@ -127,6 +144,7 @@ AI 도구는 [AGENTS.md](AGENTS.md)를 따릅니다. 사람도 같은 규칙을 
 | 관광지·음식점·카페·행사 | 한국관광공사 TourAPI 4.0 (공공데이터포털) |
 | 고속도로 휴게소 | 전국휴게소정보표준데이터, 한국도로공사 (공공데이터포털) |
 | 시연 경로 | OpenStreetMap 도로망 기반 경로 |
+| 3D 지도 앨범 | 지도 OpenFreeMap (© OpenStreetMap 기여자), 지형 고도 AWS Terrain Tiles, 지도 엔진 MapLibre GL JS |
 | 배경 음악 10곡 | Kevin MacLeod (incompetech.com), CC BY 4.0 — 곡 목록은 [CREDITS](app/app/src/main/assets/music/CREDITS.md) |
 
 자세한 수집 범위와 방법은 [docs/data](docs/data/README.md)에 있습니다. 앨범에 들어 있는 여행 세 번은 화면을 보여 드리기 위한 시연 값이며 실제 여행 기록이 아닙니다.

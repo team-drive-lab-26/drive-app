@@ -6,6 +6,8 @@ import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.webkit.RenderProcessGoneDetail
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -143,8 +145,21 @@ private fun StopList(
             val km = routeKm(ui.route)
             Row(Modifier.padding(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (km > 0) SummaryChip("${km}km")
-                SummaryChip("${ui.pins.size}곳")
-                SummaryChip("목소리 ${voiceCount}개")
+                if (ui.pins.isNotEmpty()) {
+                    SummaryChip("${ui.pins.size}곳")
+                    SummaryChip("목소리 ${voiceCount}개")
+                }
+            }
+        }
+        // 아직 들른 곳이 없으면 왼쪽 칸이 비어 보이지 않게 무엇이 쌓이는지 알려 준다
+        if (ui.pins.isEmpty() && !ui.loading) {
+            item {
+                Text(
+                    "차를 세운 곳과 그곳에서 남긴 목소리가 여기에 차례로 쌓여.",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = DoranPalette.InkSoft,
+                    modifier = Modifier.padding(top = 12.dp, end = 24.dp),
+                )
             }
         }
         itemsIndexed(ui.pins, key = { _, pin -> pin.id }) { index, pin ->
@@ -255,6 +270,14 @@ private fun WebMap(ui: AlbumMapUiState, onSelect: (String) -> Unit, onFailed: ()
             webChromeClient = object : WebChromeClient() {
                 override fun onConsoleMessage(message: ConsoleMessage): Boolean {
                     Log.d("DoranMap", "${message.message()} (${message.lineNumber()})")
+                    return true
+                }
+            }
+            // 지도 그리기 프로세스가 죽으면(그래픽 메모리 부족 등) 앱까지 끝나지 않게 받아서 평면 지도로 바꾼다
+            webViewClient = object : WebViewClient() {
+                override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+                    Log.w("DoranMap", "지도 그리기 중단, 평면 지도로 바꿈 (crash=${detail.didCrash()})")
+                    post { giveUp() }
                     return true
                 }
             }

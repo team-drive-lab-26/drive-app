@@ -16,6 +16,7 @@ import ai.pleos.playground.vehicle.listener.GearSelectionListener
 import ai.pleos.playground.vehicle.listener.LightStateListener
 import ai.pleos.playground.vehicle.listener.SeatBeltBuckledStateListener
 import ai.pleos.playground.vehicle.listener.WiperStateListener
+import java.util.concurrent.ConcurrentHashMap
 import android.content.Context
 import android.util.Log
 import com.doran.app.core.model.Gear
@@ -29,6 +30,13 @@ interface VehicleStateSource {
     val state: StateFlow<VehicleState>
     fun start() = Unit
     fun release() = Unit
+
+    /**
+     * 녹음하는 동안 송풍 소리가 목소리를 덮지 않게 바람을 가장 약하게 줄인다. [restoreFan]으로 원래 세기로 되돌린다.
+     * 실제로 줄였을 때만 [onLowered]를 부른다(공조가 꺼져 있거나 지원하지 않으면 부르지 않는다)
+     */
+    fun lowerFan(onLowered: () -> Unit = {}) = Unit
+    fun restoreFan() = Unit
 
     /** 디버그 막대에서 기어를 바꾼다. 실제 차량 값이 오면 그 값으로 덮인다 */
     fun overrideGear(gear: Gear)
@@ -61,6 +69,10 @@ class PleosVehicleStateSource(context: Context) : VehicleStateSource {
     private val buckled = mutableMapOf<SeatValue, Boolean>()
     private val beltListeners = mutableMapOf<SeatValue, SeatBeltBuckledStateListener>()
     private var started = false
+
+    // 녹음 전 송풍 세기. 차량 콜백이 다른 스레드에서 올 수 있어 동시 접근에 안전한 맵을 쓴다
+    private val fanBefore = ConcurrentHashMap<SeatArea, Int>()
+    @Volatile private var fanLowered = false
 
     private val batteryListener = object : EvBatteryStateOfChargeListener {
         override fun onEvBatteryStateOfChargeUpdated(percent: Int?) {
@@ -117,6 +129,47 @@ class PleosVehicleStateSource(context: Context) : VehicleStateSource {
         } catch (e: Exception) {
             // 차량 서비스가 없는 기기에서는 디버그 막대 값으로 시연한다
             Log.w(TAG, "차량 서비스 연결 실패", e)
+        }
+    }
+
+    override fun lowerFan(onLowered: () -> Unit) {
+        if (!started || fanLowered) return
+        fanLowered = true
+        try {
+            val hvac = vehicle.getHVAC()
+            hvac.checkHvacFanSpeedCapabilities({ areas ->
+                areas.forEach { (area, bounds) ->
+                    // 0은 공조를 끄는 값일 수 있어 켜진 채로 가장 약한 1단계까지만 낮춘다
+                    val quiet = maxOf(bounds.minValue, 1).coerceAtMost(bounds.maxValue)
+                    hvac.getHvacFanSpeed(area, { speed ->
+                        // 그사이 녹음이 끝났으면 낮추지 않는다
+                        if (fanLowered && speed != null && speed > quiet) {
+                            fanBefore[area] = speed
+                            hvac.setHvacFanSpeed(area, quiet, { _, now ->
+                                Log.i(TAG, "녹음 중 송풍 $speed → $now")
+                                onLowered()
+                            }, { e -> Log.w(TAG, "송풍을 낮추지 못함", e) })
+                        }
+                    }, { e -> Log.w(TAG, "송풍 세기를 받지 못함", e) })
+                }
+            }, { e -> Log.w(TAG, "송풍 조절을 지원하지 않음", e) })
+        } catch (e: Exception) {
+            Log.w(TAG, "송풍 조절 실패", e)
+        }
+    }
+
+    override fun restoreFan() {
+        fanLowered = false
+        val saved = fanBefore.toMap()
+        fanBefore.clear()
+        if (saved.isEmpty()) return
+        try {
+            val hvac = vehicle.getHVAC()
+            saved.forEach { (area, speed) ->
+                hvac.setHvacFanSpeed(area, speed, { _, now -> Log.i(TAG, "녹음 끝 송풍 → $now") }, { e -> Log.w(TAG, "송풍을 되돌리지 못함", e) })
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "송풍 되돌리기 실패", e)
         }
     }
 
