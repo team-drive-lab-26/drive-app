@@ -1,0 +1,62 @@
+name: android-ui
+
+# 화면마다 누를 수 있는 것을 전부 눌러 보고 앱이 죽거나 멈추는지 본다(app/scripts/ui_crawl.py).
+# 결과(result.md, 누른 뒤 화면, logcat)는 Actions 실행 페이지의 ui-crawl에서 받는다
+on:
+  workflow_dispatch:
+  push:
+    paths: [".github/workflows/android-ui.yml", "app/scripts/ui_crawl.py"]
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: KVM 사용 허용
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      # 앱은 JDK 17 툴체인으로 컴파일하고, Gradle은 JDK 21에서 돈다
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: JDK 확인
+        run: java -version
+      - name: APK 빌드
+        working-directory: app
+        run: ./gradlew --no-daemon assembleDebug
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - name: AI 서버 켜기 (시연 여행 기록 자동 입력 켬)
+        run: |
+          uv sync --locked --all-packages
+          nohup uv run python -m server.main > server.log 2>&1 &
+          for i in $(seq 30); do curl -sf http://127.0.0.1:8765/health && break; sleep 1; done
+      - name: 에뮬레이터에서 시연 흐름
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_c
+          disable-animations: false
+          # GPU 없는 CI 에뮬레이터는 앱을 처음 켤 때 그래픽 셰이더를 만드느라 화면 스레드가 몇 초씩 묶여
+          # 시스템 앱과 함께 "응답 없음"이 가끔 난다(swiftshader_indirect, guest 둘 다). 결과의 준비 단계 기록과
+          # anr 폴더로 앱 탓인지 에뮬레이터 탓인지 가른다
+          emulator-options: -no-window -gpu guest -noaudio -no-boot-anim
+          working-directory: app
+          script: python3 scripts/ui_crawl.py ui
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-crawl
+          path: |
+            app/ui/
+            server.log
+          retention-days: 7
