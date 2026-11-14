@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 접수용 시연 영상을 에뮬레이터 화면 녹화로 만든다. Actions의 android-video 워크플로가 부른다.
-# 화면은 Pleos 규격(2560x1440, 160dpi)으로 맞추고 1280x720으로 녹화한다. screenrecord는 한 번에 3분까지라 조각으로 나눠 찍는다.
+# 화면은 Pleos 규격(2560x1440, 160dpi)으로 맞추고 1920x1080으로 녹화한다(안 되면 1280x720). screenrecord는 한 번에 3분까지라 조각으로 나눠 찍는다.
 # 소리가 없으므로 사람이 한 말과 장면 이름은 $OUT/captions.tsv(시작초, 끝초, 종류, 글)로 남기고, 워크플로가 영상에 입힌다.
 # 결과: $OUT/seg*.mp4, $OUT/captions.tsv, $OUT/logcat.txt
 set -u
@@ -49,7 +49,7 @@ rec_loop() {
   local i=0
   while [ ! -f "$OUT/.stop" ]; do
     i=$((i + 1))
-    adb shell screenrecord --time-limit 170 --size 1280x720 --bit-rate 8000000 /sdcard/seg$i.mp4
+    adb shell screenrecord --time-limit 170 --size $SIZE --bit-rate 12000000 /sdcard/seg$i.mp4
   done
 }
 
@@ -57,6 +57,8 @@ rec_loop() {
 adb shell settings put global hide_error_dialogs 1 || true
 adb shell wm size 2560x1440
 adb shell wm density 160
+# GPU 없는 에뮬레이터는 WebGL 지도를 하얗게 그려서 지도 앨범을 평면 지도로 연다(디버그 빌드 전용 설정)
+adb shell settings put global doran_flat_map 1
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 for i in $(seq 30); do [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ] && break; sleep 2; done
 sleep 30
@@ -69,6 +71,10 @@ sleep 3
 adb shell pm clear $PKG > /dev/null
 adb shell pm grant $PKG android.permission.RECORD_AUDIO || true
 adb shell rm -f '/sdcard/seg*.mp4'
+SIZE=1920x1080
+adb shell screenrecord --time-limit 2 --size $SIZE /sdcard/probe.mp4 > /dev/null 2>&1 || SIZE=1280x720
+adb shell rm -f /sdcard/probe.mp4
+echo "녹화 크기: $SIZE"
 adb logcat -c
 adb shell am start -W -n $PKG/.MainActivity > /dev/null
 sleep 6
@@ -127,11 +133,13 @@ sleep 2
 scene "여행 앨범"
 tap_or 'text="앨범"' --es route album
 sleep 7
+# 들른 곳이 여럿인 40일 전 시연 여행(기록 6개)을 고른다
+tap 'text="기록 6개"' || tap 'content-desc="기록 6개"' || true
+sleep 4
 tap_or 'text="지도 앨범 열기"' --es route albummap
 scene "3D 지도 앨범"
-# GPU 없는 에뮬레이터에서는 3D 지도를 못 띄워 12초 뒤 평면 지도로 바뀐다
-sleep 16
-tap 'text="엄마"' || true
+sleep 8
+tap 'text="엄마"' || tap 'text="아이"' || true
 sleep 8
 scene "끝"
 

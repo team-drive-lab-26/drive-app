@@ -20,7 +20,16 @@ def main(folder: Path, out: Path) -> None:
     joined = folder / "joined.mp4"
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(listing), "-c", "copy", str(joined)], check=True)
 
-    filters = []
+    height = int(subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=height", "-of", "csv=p=0", str(joined)],
+        check=True, capture_output=True, text=True).stdout.strip())
+    # 에뮬레이터 상태 표시줄(24/1440)과 작업 표시줄(60/1440)은 검게 덮고, 장면 이름은 아래 띠 왼쪽에 쓴다
+    top, bottom = round(height * 24 / 1440), round(height * 60 / 1440)
+    say_size, scene_size = round(height * 0.042), round(height * 0.024)
+    filters = [
+        f"drawbox=x=0:y=0:w=iw:h={top}:color=black:t=fill",
+        f"drawbox=x=0:y=ih-{bottom}:w=iw:h={bottom}:color=black:t=fill",
+    ]
     texts = folder / "captions"
     texts.mkdir(exist_ok=True)
     for i, line in enumerate((folder / "captions.tsv").read_text(encoding="utf-8").splitlines()):
@@ -31,13 +40,13 @@ def main(folder: Path, out: Path) -> None:
         when = f"enable='between(t,{start},{end})'"
         if kind == "say":
             filters.append(
-                f"drawtext=fontfile={FONT}:textfile={path}:fontsize=34:fontcolor=white:"
-                f"box=1:boxcolor=black@0.6:boxborderw=18:x=(w-text_w)/2:y=h-text_h-70:{when}"
+                f"drawtext=fontfile={FONT}:textfile={path}:fontsize={say_size}:fontcolor=white:"
+                f"box=1:boxcolor=black@0.65:boxborderw={say_size // 2}:x=(w-text_w)/2:y=h-{bottom}-text_h-{say_size * 2}:{when}"
             )
         else:
             filters.append(
-                f"drawtext=fontfile={FONT}:textfile={path}:fontsize=22:fontcolor=0xFF8A3D:"
-                f"box=1:boxcolor=black@0.45:boxborderw=12:x=w-text_w-36:y=40:{when}"
+                f"drawtext=fontfile={FONT}:textfile={path}:fontsize={scene_size}:fontcolor=0xFF8A3D:"
+                f"x={scene_size * 2}:y=h-{bottom}+({bottom}-text_h)/2:{when}"
             )
     script = folder / "filters.txt"
     script.write_text(",\n".join(filters) or "null", encoding="utf-8")
