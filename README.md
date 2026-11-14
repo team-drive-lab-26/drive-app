@@ -35,11 +35,13 @@
 
 ## APK
 
-실행용 release APK `도란의검_도란_release.apk`는 [GitHub Release v1.0](https://github.com/team-drive-lab-26/drive-app/releases/tag/v1.0)에 있습니다. 파일이 112MB라 저장소 파일 한도(100MB)를 넘어서 Release에 올렸고, [`apk/`](apk/) 폴더에 같은 링크를 적어 두었습니다.
+실행용 release APK `Doranui-Geom_Doran_release.apk`(팀명 도란의 검, 앱 이름 도란)는 [GitHub Release v1.0](https://github.com/team-drive-lab-26/drive-app/releases/tag/v1.0)에 있습니다. 파일이 112MB라 저장소 파일 한도(100MB)를 넘어서 Release에 올렸고, [`apk/`](apk/) 폴더에 같은 링크를 적어 두었습니다.
 
 ```
-adb install -r 도란의검_도란_release.apk
+adb install -r Doranui-Geom_Doran_release.apk
 ```
+
+시연 영상(약 3분, 소리 없는 화면 녹화)은 같은 Release의 `doran_demo.mp4`입니다.
 
 release APK는 인터넷에 올려 둔 AI 서버(`https://doran-agent.onrender.com`)에 붙으므로, 에뮬레이터에 설치만 하면 바로 써 볼 수 있습니다. 무료 호스팅이라 15분 동안 요청이 없으면 서버가 잠듭니다. 앱을 켜면 서버를 깨우는 데 1분쯤 걸리니 첫 화면에서 잠시 기다린 뒤 말을 걸어 주세요. 서버가 다시 켜지면 시연 여행 3건만 남고 그 전 기록은 지워집니다.
 
