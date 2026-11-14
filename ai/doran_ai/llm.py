@@ -63,7 +63,9 @@ class ChatCompletionsClassifier:
                     "content": (
                         "차량 여행 앱의 발화를 분류한다. 장소 추천 place, 도착 시각 arrival, "
                         "휴게소 rest, 노래 music, 앞서 언급한 장소 memory, 여행 다시 듣기 replay, "
-                        "그 밖에는 unknown. 설명 없이 JSON 객체 {\"intent\":\"...\"}만 출력한다."
+                        "그 밖에는 unknown. 배고프다, 뭐 먹지, 커피 마시고 싶다, 구경할 데처럼 "
+                        "먹을 곳·마실 곳·갈 곳을 찾는 말은 장소를 콕 집지 않아도 place다. "
+                        "설명 없이 JSON 객체 {\"intent\":\"...\"}만 출력한다."
                     ),
                 },
                 {"role": "user", "content": utterance[:300]},
