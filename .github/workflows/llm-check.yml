@@ -20,6 +20,10 @@ jobs:
         with:
           python-version: "3.12"
       - run: uv sync --locked --all-packages
+      - name: 키에 걸린 사용 한도(응답 헤더)
+        run: |
+          curl -s -D headers.txt -o /dev/null https://api.groq.com/openai/v1/chat/completions             -H "Authorization: Bearer $GROQ_API_KEY" -H "Content-Type: application/json"             -d '{"model":"openai/gpt-oss-20b","messages":[{"role":"user","content":"hi"}],"max_tokens":8}'
+          grep -i "^HTTP\|x-ratelimit" headers.txt
       - name: 의도 분류와 문장 다듬기 직접 호출
         run: |
           uv run python - <<'EOF'
