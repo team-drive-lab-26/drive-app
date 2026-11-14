@@ -110,7 +110,7 @@ scene "휴게소 도착 (기어 P)"
 go --es arrive -
 sleep 9
 said "엄마" "응"
-tap_or 'text="남길래"' --es say "'응'"
+go --es say "'응'"
 scene "15초 녹음 (음악 정지, 송풍 최저)"
 sleep 18
 tap_or 'text="엄마"' --es route home
@@ -134,10 +134,10 @@ scene "여행 앨범"
 tap_or 'text="앨범"' --es route album
 sleep 7
 # 들른 곳이 여럿인 40일 전 시연 여행(기록 6개)을 고른다
-tap 'text="기록 6개"' || tap 'content-desc="기록 6개"' || true
+tap '기록 6개' || true
 sleep 4
 tap_or 'text="지도 앨범 열기"' --es route albummap
-scene "3D 지도 앨범"
+scene "지도 앨범 (녹화 환경에 GPU가 없어 평면 지도)"
 sleep 8
 tap 'text="엄마"' || tap 'text="아이"' || true
 sleep 8

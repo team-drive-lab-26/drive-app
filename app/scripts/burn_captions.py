@@ -23,6 +23,7 @@ def main(folder: Path, out: Path) -> None:
     height = int(subprocess.run(
         ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=height", "-of", "csv=p=0", str(joined)],
         check=True, capture_output=True, text=True).stdout.strip())
+    # 사람이 한 말은 도란(아래 가운데)을 가리지 않게 화면 60% 높이에 쓴다.
     # 에뮬레이터 상태 표시줄(24/1440)과 작업 표시줄(60/1440)은 검게 덮고, 장면 이름은 아래 띠 왼쪽에 쓴다
     top, bottom = round(height * 24 / 1440), round(height * 60 / 1440)
     say_size, scene_size = round(height * 0.042), round(height * 0.024)
@@ -41,7 +42,7 @@ def main(folder: Path, out: Path) -> None:
         if kind == "say":
             filters.append(
                 f"drawtext=fontfile={FONT}:textfile={path}:fontsize={say_size}:fontcolor=white:"
-                f"box=1:boxcolor=black@0.65:boxborderw={say_size // 2}:x=(w-text_w)/2:y=h-{bottom}-text_h-{say_size * 2}:{when}"
+                f"box=1:boxcolor=black@0.65:boxborderw={say_size // 2}:x=(w-text_w)/2:y=h*0.6:{when}"
             )
         else:
             filters.append(
