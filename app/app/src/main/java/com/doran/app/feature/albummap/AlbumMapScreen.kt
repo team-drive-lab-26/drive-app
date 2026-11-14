@@ -1,6 +1,7 @@
 package com.doran.app.feature.albummap
 
 import android.annotation.SuppressLint
+import android.provider.Settings
 import android.util.Log
 import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
@@ -68,6 +69,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.doran.app.BuildConfig
 import com.doran.app.core.designsystem.BackBar
 import com.doran.app.core.designsystem.DoranPalette
 import com.doran.app.core.designsystem.DoranText
@@ -93,7 +95,12 @@ import kotlin.math.sqrt
 fun AlbumMapScreen(onBack: () -> Unit, viewModel: AlbumMapViewModel = viewModel(factory = AlbumMapViewModel.Factory)) {
     val ui by viewModel.state.collectAsStateWithLifecycle()
     val playing by viewModel.playingId.collectAsStateWithLifecycle()
-    var webFailed by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    // 디버그 빌드에서 `adb shell settings put global doran_flat_map 1`이면 평면 지도로 연다.
+    // GPU 없는 CI 에뮬레이터는 WebGL 지도를 하얗게 그려서 시연 영상 녹화 때 쓴다
+    var webFailed by remember {
+        mutableStateOf(BuildConfig.DEBUG && Settings.Global.getString(context.contentResolver, "doran_flat_map") == "1")
+    }
 
     Column(Modifier.fillMaxSize().background(DoranPalette.Background)) {
         BackBar(back = "지나온 길", title = ui.title, onBack = onBack)
