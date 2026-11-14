@@ -80,7 +80,7 @@ class ClassifierTests(unittest.TestCase):
         classifier = ChatCompletionsClassifier(
             "https://api.groq.com/openai/v1/chat/completions", "openai/gpt-oss-20b", "test-key"
         )
-        for output in ["다른 식당에 들러 볼까?", "바닷가 식당까지 5분이야?", "바닷가 식당에 들르자."]:
+        for output in ["다른 식당에 들러 볼까?", "바닷가 식당까지 5분이야?", "바닷가 식당에 들르자.", "바닷가 식당에 들러볼까요?"]:
             response = io.BytesIO(json.dumps({
                 "choices": [{"message": {"content": json.dumps({"speech": output}, ensure_ascii=False)}}]
             }).encode())
