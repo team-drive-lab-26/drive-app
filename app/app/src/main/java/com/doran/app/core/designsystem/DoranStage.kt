@@ -1,9 +1,11 @@
 package com.doran.app.core.designsystem
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -62,7 +64,7 @@ fun DoranStage(
         Spacer(Modifier.height(8.dp))
         AnimatedContent(
             targetState = caption,
-            transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
+            transitionSpec = { (fadeIn(tween(320, delayMillis = 80)) + slideInVertically(tween(420, easing = FastOutSlowInEasing)) { it / 8 }) togetherWith fadeOut(tween(200)) },
             label = "caption",
         ) { text ->
             Text(

@@ -2,12 +2,7 @@ package com.doran.app.core.designsystem
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -30,6 +25,8 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.exp
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import kotlinx.coroutines.flow.first
 
 enum class RoadSide { LEFT, RIGHT, CENTER }
 
@@ -324,17 +322,35 @@ fun RoadScene(
 private const val DASH_PERIOD = 0.9f
 private const val DASH_LENGTH = 0.38f
 
-/** 차선이 다가오는 정도. [flow]가 꺼져 있으면 0에 머문다. 한 칸 지나는 데 8초 */
+/**
+ * 차선이 다가오는 정도. 한 칸 지나는 데 8초. [flow]가 켜지면 서서히 빨라지고 꺼지면 서서히 멈춘다.
+ * 멈춰 있는 동안에는 프레임을 돌리지 않는다
+ */
 @Composable
 private fun lanePhase(flow: Boolean): State<Float> {
-    if (!flow) return remember { mutableFloatStateOf(0f) }
-    return rememberInfiniteTransition(label = "lanes").animateFloat(
-        initialValue = 0f,
-        targetValue = DASH_PERIOD,
-        animationSpec = infiniteRepeatable(tween(8000, easing = LinearEasing), RepeatMode.Restart),
-        label = "phase",
-    )
+    val phase = remember { mutableFloatStateOf(0f) }
+    val speed = remember { Animatable(0f) }
+    LaunchedEffect(flow) {
+        speed.animateTo(if (flow) 1f else 0f, tween(LANE_EASE_MS, easing = FastOutSlowInEasing))
+    }
+    LaunchedEffect(Unit) {
+        while (true) {
+            snapshotFlow { speed.value > 0f }.first { it }
+            var last = withFrameNanos { it }
+            while (speed.value > 0f) {
+                withFrameNanos { now ->
+                    val dt = (now - last) / 1_000_000_000f
+                    last = now
+                    phase.floatValue = (phase.floatValue + dt * speed.value * DASH_PERIOD / LANE_PERIOD_S) % DASH_PERIOD
+                }
+            }
+        }
+    }
+    return phase
 }
+
+private const val LANE_PERIOD_S = 8f
+private const val LANE_EASE_MS = 1_400
 
 /** 겹산 능선. 사인 몇 개를 겹쳐 자연스럽게 오르내리게 한다. [valley]만큼 길이 지나는 가운데가 낮아진다 */
 private fun ridgePath(g: RoadGeometry, height: Float, seed: Float, valley: Float): Path = Path().apply {
