@@ -1,0 +1,109 @@
+[
+  {
+    "id": "dummy-rest-1",
+    "name": "더미 용인휴게소",
+    "source": "expressway_api",
+    "highway": "영동고속도로",
+    "direction": "강릉 방향",
+    "latitude": 37.285,
+    "longitude": 127.11,
+    "menu": [
+      "우동",
+      "호두과자"
+    ],
+    "facilities": [
+      "주유소",
+      "전기차충전소",
+      "수유실"
+    ],
+    "route_distance_km": 0.3,
+    "along_route": true,
+    "navi_poi_id": "dummy-rest-poi-1",
+    "dummy": true
+  },
+  {
+    "id": "dummy-rest-2",
+    "name": "더미 여주휴게소",
+    "source": "expressway_api",
+    "highway": "영동고속도로",
+    "direction": "강릉 방향",
+    "latitude": 37.3,
+    "longitude": 127.645,
+    "menu": [
+      "돈가스",
+      "고구마빵"
+    ],
+    "facilities": [
+      "주유소",
+      "약국"
+    ],
+    "route_distance_km": 0.3,
+    "along_route": true,
+    "navi_poi_id": "dummy-rest-poi-2",
+    "dummy": true
+  },
+  {
+    "id": "dummy-rest-3",
+    "name": "더미 횡성휴게소",
+    "source": "expressway_api",
+    "highway": "영동고속도로",
+    "direction": "강릉 방향",
+    "latitude": 37.371,
+    "longitude": 127.887,
+    "menu": [
+      "한우국밥",
+      "감자떡"
+    ],
+    "facilities": [
+      "전기차충전소",
+      "편의점"
+    ],
+    "route_distance_km": 0.3,
+    "along_route": true,
+    "navi_poi_id": "dummy-rest-poi-3",
+    "dummy": true
+  },
+  {
+    "id": "dummy-rest-4",
+    "name": "더미 평창휴게소",
+    "source": "expressway_api",
+    "highway": "영동고속도로",
+    "direction": "강릉 방향",
+    "latitude": 37.562,
+    "longitude": 128.431,
+    "menu": [
+      "황태해장국",
+      "메밀전병"
+    ],
+    "facilities": [
+      "주유소",
+      "전기차충전소",
+      "쉼터"
+    ],
+    "route_distance_km": 0.3,
+    "along_route": true,
+    "navi_poi_id": "dummy-rest-poi-4",
+    "dummy": true
+  },
+  {
+    "id": "dummy-rest-5",
+    "name": "더미 강릉휴게소",
+    "source": "expressway_api",
+    "highway": "영동고속도로",
+    "direction": "강릉 방향",
+    "latitude": 37.682,
+    "longitude": 128.721,
+    "menu": [
+      "커피",
+      "오징어순대"
+    ],
+    "facilities": [
+      "전망대",
+      "편의점"
+    ],
+    "route_distance_km": 0.3,
+    "along_route": true,
+    "navi_poi_id": "dummy-rest-poi-5",
+    "dummy": true
+  }
+]

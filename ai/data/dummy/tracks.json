@@ -1,0 +1,85 @@
+[
+  {
+    "id": "dummy-track-1",
+    "name": "아침 고속도로",
+    "artist": "더미 아티스트",
+    "source": "catalog",
+    "tags": [
+      "bright",
+      "travel"
+    ],
+    "dummy": true
+  },
+  {
+    "id": "dummy-track-2",
+    "name": "창문을 열어",
+    "artist": "더미 아티스트",
+    "source": "catalog",
+    "tags": [
+      "refresh",
+      "travel"
+    ],
+    "dummy": true
+  },
+  {
+    "id": "dummy-track-3",
+    "name": "바다까지 두 시간",
+    "artist": "더미 아티스트",
+    "source": "catalog",
+    "tags": [
+      "travel"
+    ],
+    "dummy": true
+  },
+  {
+    "id": "dummy-track-4",
+    "name": "커피 한 잔의 여유",
+    "artist": "더미 아티스트",
+    "source": "catalog",
+    "tags": [
+      "calm"
+    ],
+    "dummy": true
+  },
+  {
+    "id": "dummy-track-5",
+    "name": "졸음 깨는 노래",
+    "artist": "더미 아티스트",
+    "source": "catalog",
+    "tags": [
+      "refresh"
+    ],
+    "dummy": true
+  },
+  {
+    "id": "dummy-track-6",
+    "name": "햇살 드라이브",
+    "artist": "더미 아티스트",
+    "source": "catalog",
+    "tags": [
+      "bright"
+    ],
+    "dummy": true
+  },
+  {
+    "id": "dummy-track-7",
+    "name": "돌아오는 길",
+    "artist": "더미 아티스트",
+    "source": "catalog",
+    "tags": [
+      "calm"
+    ],
+    "dummy": true
+  },
+  {
+    "id": "dummy-track-8",
+    "name": "산을 넘어서",
+    "artist": "더미 아티스트",
+    "source": "catalog",
+    "tags": [
+      "travel",
+      "bright"
+    ],
+    "dummy": true
+  }
+]

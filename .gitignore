@@ -1,0 +1,11 @@
+.DS_Store
+.env
+.env.*
+*.jks
+*.keystore
+.local/
+CLAUDE.local.md
+.claude/settings.local.json
+!.env.example
+server/var/
+ai/data/*/raw/

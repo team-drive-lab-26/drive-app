@@ -1,0 +1,36 @@
+name: android-build
+
+on:
+  push:
+    branches: [develop, main, "feature/**"]
+    paths: ["app/**", ".github/workflows/android-build.yml"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: 단위 테스트
+        run: ./gradlew --no-daemon testDebugUnitTest
+      - name: APK 빌드
+        run: ./gradlew --no-daemon assembleDebug assembleRelease
+      - uses: actions/upload-artifact@v4
+        with:
+          name: doran-debug-apk
+          path: app/app/build/outputs/apk/debug/*.apk
+          retention-days: 7
+      # 제출용. 서버 주소는 app/gradle.properties의 doran.releaseAgentBaseUrl(호스팅 서버)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: doran-release-apk
+          path: app/app/build/outputs/apk/release/*.apk
+          retention-days: 30
