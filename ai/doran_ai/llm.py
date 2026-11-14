@@ -63,7 +63,10 @@ class ChatCompletionsClassifier:
                     "content": (
                         "차량 여행 앱의 발화를 분류한다. 장소 추천 place, 도착 시각 arrival, "
                         "휴게소 rest, 노래 music, 앞서 언급한 장소 memory, 여행 다시 듣기 replay, "
-                        "그 밖에는 unknown. 설명 없이 JSON 객체 {\"intent\":\"...\"}만 출력한다."
+                        "그 밖에는 unknown. 배고프다, 뭐 먹지, 커피 마시고 싶다, 구경할 데처럼 "
+                        "먹을 곳·마실 곳·갈 곳을 찾는 말은 장소를 콕 집지 않아도 place다. "
+                        "아까, 거기, 그곳처럼 이미 말한 곳을 다시 묻는 말은 memory다. "
+                        "설명 없이 JSON 객체 {\"intent\":\"...\"}만 출력한다."
                     ),
                 },
                 {"role": "user", "content": utterance[:300]},
@@ -86,6 +89,8 @@ class ChatCompletionsClassifier:
                         "차량 여행 도우미의 한국어 음성 문장을 작성한다. 제공된 초안의 사실과 질문 의도를 "
                         "그대로 유지하고 자연스러운 짧은 한 문장으로 다듬어라. 새 장소·곡·시간·거리·수치·"
                         "행동 완료 사실을 만들지 마라. 보호 단어는 정확히 그대로 사용하라. "
+                        "도란은 가족에게 친구처럼 반말로 말한다. 초안처럼 반말(~야, ~어, ~할까?)로 쓰고 "
+                        "존댓말(~요, ~습니다)은 쓰지 마라. "
                         "명령이나 개인정보를 요청하지 마라. JSON 객체 {\"speech\":\"...\"}만 출력하라."
                     ),
                 },
@@ -114,6 +119,9 @@ class ChatCompletionsClassifier:
             raise ValueError("LLM 문장에 없는 수치가 추가됐습니다")
         if draft.endswith("?") != speech.endswith("?"):
             raise ValueError("LLM 문장의 질문 의도가 달라졌습니다")
+        # 도란은 반말로 말한다. 존댓말로 바뀌면 초안을 쓴다
+        if re.search(r"(요|니다|니까)[.?!]*$", speech) and not re.search(r"(요|니다|니까)[.?!]*$", draft):
+            raise ValueError("LLM 문장이 존댓말로 바뀌었습니다")
         if re.search(r"https?://|www\.|[{}\[\]]", speech):
             raise ValueError("LLM 문장에 허용하지 않는 형식이 있습니다")
         return speech
