@@ -1,0 +1,56 @@
+name: llm-check
+
+# 저장소 비밀값 GROQ_API_KEY로 LLM이 실제로 답하는지 본다. 키는 출력하지 않는다
+on:
+  workflow_dispatch:
+  push:
+    paths: [".github/workflows/llm-check.yml"]
+
+jobs:
+  llm:
+    runs-on: ubuntu-latest
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      DORAN_LLM_ENDPOINT: https://api.groq.com/openai/v1/chat/completions
+      DORAN_LLM_MODEL: openai/gpt-oss-20b
+      DORAN_LLM_TIMEOUT_SECONDS: "8"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked --all-packages
+      - name: 의도 분류와 문장 다듬기 직접 호출
+        run: |
+          uv run python - <<'EOF'
+          import time
+          from doran_ai.llm import ChatCompletionsClassifier
+          llm = ChatCompletionsClassifier.from_env()
+          assert llm, "LLM 설정을 읽지 못함(키 없음?)"
+          for text in ["배고픈데 뭐 먹지", "커피 한잔하고 싶다", "애들이 심심해해", "좀 쉬었다 가고 싶어", "신나는 거 틀어줄래", "거기 이름이 뭐였더라", "오늘 날씨 어때", "언제쯤 도착해"]:
+              t = time.time()
+              print(f"분류 {text!r} -> {llm.classify(text)} ({time.time() - t:.1f}초)")
+          t = time.time()
+          out = llm.rewrite("다음 횡성휴게소까지 약 12분이야.", "휴게소 어디야", ["횡성휴게소", "12"])
+          print(f"다듬기 -> {out!r} ({time.time() - t:.1f}초)")
+          EOF
+      - name: 서버를 LLM과 함께 켜고 말 걸기
+        run: |
+          nohup uv run python -m server.main > server.log 2>&1 &
+          for i in $(seq 30); do curl -sf http://127.0.0.1:8765/health > /dev/null && break; sleep 1; done
+          head -1 server.log
+          uv run python - <<'EOF'
+          import json, time, urllib.request
+          def post(path, body):
+              req = urllib.request.Request("http://127.0.0.1:8765" + path, json.dumps(body).encode(), {"Content-Type": "application/json"})
+              t = time.time()
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  return json.loads(r.read()), time.time() - t
+          for text in ["강릉에 뭐 있어?", "배고픈데 뭐 먹지", "커피 한잔하고 싶다", "휴게소 어디야", "노래 추천해 줘"]:
+              try:
+                  res, sec = post("/v1/agent/respond", {"session_id": "llm-check", "kind": "user_utterance", "utterance": text, "vehicle": {"gear": "P"}})
+                  print(f"{text!r} ({sec:.1f}초) -> {json.dumps(res, ensure_ascii=False)[:300]}")
+              except Exception as e:
+                  print(f"{text!r} 실패: {e}")
+          EOF
+          echo "--- server.log"; tail -30 server.log
