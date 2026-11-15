@@ -10,6 +10,7 @@ on:
 jobs:
   demo:
     runs-on: ubuntu-latest
+    timeout-minutes: 100
     steps:
       - uses: actions/checkout@v4
       - name: KVM 사용 허용

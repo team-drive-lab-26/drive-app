@@ -21,7 +21,12 @@ pid = ""
 
 
 def adb(*args: str, check: bool = False) -> str:
-    return subprocess.run(["adb", *args], capture_output=True, text=True, check=check).stdout
+    # 에뮬레이터가 멈춰도 점검 전체가 묶이지 않게 명령마다 시간 제한을 둔다
+    try:
+        return subprocess.run(["adb", *args], capture_output=True, text=True, check=check, timeout=120).stdout
+    except subprocess.TimeoutExpired:
+        print(f"  adb {' '.join(args)[:60]} 시간 초과", flush=True)
+        return ""
 
 
 def go(*extras: str) -> None:
@@ -136,7 +141,10 @@ def crawl(name: str, steps: list[list[str]], wait: float) -> None:
         state = health(f"{name}:{text}")
         after = dump()
         shot = OUT / f"{len(rows):03d}_{re.sub(r'[^0-9A-Za-z가-힣]+', '_', name + '_' + text)[:50]}.png"
-        shot.write_bytes(subprocess.run(["adb", "exec-out", "screencap", "-p"], capture_output=True).stdout)
+        try:
+            shot.write_bytes(subprocess.run(["adb", "exec-out", "screencap", "-p"], capture_output=True, timeout=60).stdout)
+        except subprocess.TimeoutExpired:
+            pass
         rows.append((name, text, screen_text(after), state))
         print(f"  {text} -> {state}", flush=True)
         # 글자 입력칸을 눌렀으면 키보드를 닫는다
