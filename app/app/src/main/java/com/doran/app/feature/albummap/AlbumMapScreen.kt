@@ -6,6 +6,7 @@ import android.util.Log
 import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.RenderProcessGoneDetail
@@ -282,6 +283,9 @@ private fun WebMap(ui: AlbumMapUiState, onSelect: (String) -> Unit, onFailed: ()
             }
             // 지도 그리기 프로세스가 죽으면(그래픽 메모리 부족 등) 앱까지 끝나지 않게 받아서 평면 지도로 바꾼다
             webViewClient = object : WebViewClient() {
+                // 지도 아래 출처 링크를 눌러도 지도 화면이 외부 사이트로 넘어가지 않게 한다
+                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = true
+
                 override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
                     Log.w("DoranMap", "지도 그리기 중단, 평면 지도로 바꿈 (crash=${detail.didCrash()})")
                     post { giveUp() }
